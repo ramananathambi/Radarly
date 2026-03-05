@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome — Radarly</title>
+  <link rel="stylesheet" href="/assets/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-brand" href="/">Radarly</a>
+  </nav>
+  <div class="container" style="max-width:400px;margin-top:48px;">
+    <div class="card">
+      <h2 style="margin-bottom:8px;">Welcome to Radarly</h2>
+      <p style="color:var(--text-secondary);margin-bottom:24px;">Tell us your name so we can personalise your alerts</p>
+      <div id="alert-box"></div>
+
+      <form id="onboard-form">
+        <div class="form-group">
+          <label for="name">Your Name</label>
+          <input type="text" id="name" placeholder="e.g. Ramana" required />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;" id="save-btn">Start Getting Alerts</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    if (!getToken()) window.location.href = '/login.html';
+
+    document.getElementById('name').focus();
+
+    document.getElementById('onboard-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('save-btn');
+      const name = document.getElementById('name').value.trim();
+      if (!name) return showAlert('alert-box', 'Please enter your name', 'error');
+
+      setLoading(btn, true);
+      try {
+        await api('POST', '/api/auth/onboarding', { name });
+        window.location.href = '/dashboard.html';
+      } catch (err) {
+        showAlert('alert-box', err.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+  </script>
+</body>
+</html>

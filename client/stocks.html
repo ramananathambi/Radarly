@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stocks — Radarly</title>
+  <link rel="stylesheet" href="/assets/style.css" />
+  <style>
+    .filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .filters .form-group { margin-bottom: 0; flex: 1; min-width: 160px; }
+    .filters .search-group { flex: 2; min-width: 220px; }
+    .stock-row td { vertical-align: middle; }
+    .bookmark-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .bookmark-btn:hover { border-color: var(--primary); }
+    .bookmark-btn.saved {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .selected-count {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .results-info {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-brand" href="/dashboard.html">Radarly</a>
+    <div class="nav-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/stocks.html" class="active">Stocks</a>
+      <a href="/settings.html">Alerts</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="alert-box"></div>
+
+    <h1 class="page-title">Browse Stocks</h1>
+
+    <div class="selected-count" id="selected-count"></div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <div class="form-group search-group">
+        <label>Search</label>
+        <input type="text" id="search-input" placeholder="Search by symbol or company name..." />
+      </div>
+      <div class="form-group">
+        <label>Exchange</label>
+        <select id="filter-exchange">
+          <option value="">All Exchanges</option>
+          <option value="NSE">NSE</option>
+          <option value="BSE">BSE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Sector</label>
+        <select id="filter-sector">
+          <option value="">All Sectors</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results-info" class="results-info"></div>
+    <div id="stocks-container">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination" style="display:none;"></div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    let currentPage = 1;
+    let savedSymbols = new Set();
+    let searchTimeout = null;
+    let isSearchMode = false;
+
+    (async () => {
+      const user = await requireLogin();
+      if (!user) return;
+
+      // Load user's saved stocks + sectors in parallel
+      const [stocksRes, sectorsRes] = await Promise.all([
+        api('GET', '/api/user/stocks').catch(() => ({ stocks: [] })),
+        api('GET', '/api/stocks/sectors').catch(() => ({ sectors: [] })),
+      ]);
+
+      savedSymbols = new Set(stocksRes.stocks.map(s => s.symbol));
+      updateSelectedCount();
+
+      // Populate sector dropdown
+      const sectorSelect = document.getElementById('filter-sector');
+      for (const s of sectorsRes.sectors || []) {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        sectorSelect.appendChild(opt);
+      }
+
+      // Load first page
+      loadStocks();
+
+      // Event listeners
+      document.getElementById('search-input').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        const q = e.target.value.trim();
+        searchTimeout = setTimeout(() => {
+          if (q.length >= 2) {
+            searchStocks(q);
+          } else if (q.length === 0) {
+            isSearchMode = false;
+            currentPage = 1;
+            loadStocks();
+          }
+        }, 300);
+      });
+
+      document.getElementById('filter-exchange').addEventListener('change', () => {
+        if (!isSearchMode) { currentPage = 1; loadStocks(); }
+      });
+
+      document.getElementById('filter-sector').addEventListener('change', () => {
+        if (!isSearchMode) { currentPage = 1; loadStocks(); }
+      });
+    })();
+
+    function updateSelectedCount() {
+      document.getElementById('selected-count').textContent =
+        `${savedSymbols.size} stock${savedSymbols.size !== 1 ? 's' : ''} in your watchlist`;
+    }
+
+    async function loadStocks() {
+      isSearchMode = false;
+      const container = document.getElementById('stocks-container');
+      container.innerHTML = '<div class="spinner"></div>';
+
+      const exchange = document.getElementById('filter-exchange').value;
+      const sector = document.getElementById('filter-sector').value;
+
+      let url = `/api/stocks?page=${currentPage}`;
+      if (exchange) url += `&exchange=${encodeURIComponent(exchange)}`;
+      if (sector) url += `&sector=${encodeURIComponent(sector)}`;
+
+      try {
+        const data = await api('GET', url);
+        renderStocks(data.stocks || []);
+        renderPagination(data.page, data.totalPages, data.total);
+      } catch (err) {
+        container.innerHTML = `<div class="card" style="color:var(--danger);">Failed to load stocks: ${err.message}</div>`;
+      }
+    }
+
+    async function searchStocks(query) {
+      isSearchMode = true;
+      const container = document.getElementById('stocks-container');
+      container.innerHTML = '<div class="spinner"></div>';
+
+      try {
+        const data = await api('GET', `/api/stocks/search?q=${encodeURIComponent(query)}`);
+        renderStocks(data.stocks || []);
+        document.getElementById('results-info').textContent =
+          `${data.stocks.length} result${data.stocks.length !== 1 ? 's' : ''} for "${query}"`;
+        document.getElementById('pagination').style.display = 'none';
+      } catch (err) {
+        container.innerHTML = `<div class="card" style="color:var(--danger);">Search failed: ${err.message}</div>`;
+      }
+    }
+
+    function renderStocks(stocks) {
+      const container = document.getElementById('stocks-container');
+
+      if (stocks.length === 0) {
+        container.innerHTML = '<div class="card" style="color:var(--text-secondary);">No stocks found.</div>';
+        document.getElementById('results-info').textContent = '';
+        return;
+      }
+
+      let html = '<div class="table-wrap"><table><thead><tr>';
+      html += '<th>Symbol</th><th>Company</th><th>Exchange</th><th>Sector</th><th style="text-align:center;">Watchlist</th>';
+      html += '</tr></thead><tbody>';
+
+      for (const s of stocks) {
+        const isSaved = savedSymbols.has(s.symbol);
+        const btnClass = isSaved ? 'bookmark-btn saved' : 'bookmark-btn';
+        const btnText = isSaved ? 'Saved' : '+ Add';
+        const badge = s.exchange || '—';
+        const badgeClass = badge === 'NSE' ? 'badge-nse' : badge === 'BSE' ? 'badge-bse' : 'badge-both';
+
+        html += `<tr class="stock-row">`;
+        html += `<td><strong>${s.symbol}</strong></td>`;
+        html += `<td>${s.company_name || '—'}</td>`;
+        html += `<td><span class="badge ${badgeClass}">${badge}</span></td>`;
+        html += `<td>${s.sector || '—'}</td>`;
+        html += `<td style="text-align:center;"><button class="${btnClass}" onclick="toggleBookmark('${s.symbol}', this)">${btnText}</button></td>`;
+        html += `</tr>`;
+      }
+
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    }
+
+    function renderPagination(page, totalPages, total) {
+      const info = document.getElementById('results-info');
+      info.textContent = `Showing page ${page} of ${totalPages} (${total} stocks)`;
+
+      const pag = document.getElementById('pagination');
+      if (totalPages <= 1) { pag.style.display = 'none'; return; }
+
+      pag.style.display = 'flex';
+      let html = '';
+
+      html += `<button ${page <= 1 ? 'disabled' : ''} onclick="goToPage(${page - 1})">Prev</button>`;
+
+      // Show up to 5 page buttons around current
+      const start = Math.max(1, page - 2);
+      const end = Math.min(totalPages, page + 2);
+      if (start > 1) html += `<button onclick="goToPage(1)">1</button>`;
+      if (start > 2) html += `<span style="color:var(--text-secondary);">...</span>`;
+
+      for (let i = start; i <= end; i++) {
+        html += `<button class="${i === page ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+      }
+
+      if (end < totalPages - 1) html += `<span style="color:var(--text-secondary);">...</span>`;
+      if (end < totalPages) html += `<button onclick="goToPage(${totalPages})">${totalPages}</button>`;
+
+      html += `<button ${page >= totalPages ? 'disabled' : ''} onclick="goToPage(${page + 1})">Next</button>`;
+
+      pag.innerHTML = html;
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      loadStocks();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function toggleBookmark(symbol, btn) {
+      const isSaved = savedSymbols.has(symbol);
+
+      btn.disabled = true;
+      btn.textContent = '...';
+
+      try {
+        if (isSaved) {
+          await api('DELETE', `/api/user/stocks/${symbol}`);
+          savedSymbols.delete(symbol);
+          btn.className = 'bookmark-btn';
+          btn.textContent = '+ Add';
+        } else {
+          await api('POST', '/api/user/stocks', { symbol });
+          savedSymbols.add(symbol);
+          btn.className = 'bookmark-btn saved';
+          btn.textContent = 'Saved';
+        }
+        updateSelectedCount();
+      } catch (err) {
+        showAlert('alert-box', err.message, 'error');
+        btn.textContent = isSaved ? 'Saved' : '+ Add';
+        btn.className = isSaved ? 'bookmark-btn saved' : 'bookmark-btn';
+      }
+
+      btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

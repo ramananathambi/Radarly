@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Radarly</title>
+  <link rel="stylesheet" href="/assets/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-brand" href="/dashboard.html">Radarly</a>
+    <div class="nav-links">
+      <a href="/dashboard.html" class="active">Dashboard</a>
+      <a href="/stocks.html">Stocks</a>
+      <a href="/settings.html">Alerts</a>
+      <a href="#" onclick="logout()" style="color:var(--danger)">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="alert-box"></div>
+
+    <h1 class="page-title" id="greeting">Dashboard</h1>
+
+    <!-- Summary cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;">
+      <div class="card">
+        <div style="color:var(--text-secondary);font-size:13px;">Alert Preference</div>
+        <div style="font-size:20px;font-weight:700;margin-top:4px;" id="pref-summary">—</div>
+      </div>
+      <div class="card">
+        <div style="color:var(--text-secondary);font-size:13px;">My Selected Stocks</div>
+        <div style="font-size:20px;font-weight:700;margin-top:4px;" id="stock-count">—</div>
+      </div>
+      <div class="card">
+        <div style="color:var(--text-secondary);font-size:13px;">Today</div>
+        <div style="font-size:20px;font-weight:700;margin-top:4px;" id="today-date">—</div>
+      </div>
+    </div>
+
+    <!-- Upcoming dividends -->
+    <h2 style="margin-bottom:16px;">Upcoming Dividends (Next 7 days)</h2>
+    <div id="dividends-container">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- User's stocks with upcoming actions -->
+    <h2 style="margin-top:32px;margin-bottom:16px;">My Stocks</h2>
+    <div id="my-stocks-container">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    (async () => {
+      const user = await requireLogin();
+      if (!user) return;
+
+      document.getElementById('greeting').textContent = `Hi ${user.name || 'there'}!`;
+      document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-IN', {
+        weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+      });
+
+      // Load data in parallel
+      const [prefs, stocks, divs] = await Promise.all([
+        api('GET', '/api/user/preferences').catch(() => ({ preferences: [] })),
+        api('GET', '/api/user/stocks').catch(() => ({ stocks: [] })),
+        api('GET', '/api/dividends/upcoming').catch(() => ({ dividends: [] })),
+      ]);
+
+      // Pref summary
+      const divPref = prefs.preferences.find(p => p.alert_type === 'DIVIDEND');
+      if (divPref) {
+        const status = divPref.is_enabled ? 'ON' : 'OFF';
+        const scope = divPref.scope === 'all_stocks' ? 'All Stocks' : 'Selected Only';
+        document.getElementById('pref-summary').textContent = `Dividends: ${status} (${scope})`;
+      }
+
+      // Stock count
+      document.getElementById('stock-count').textContent = stocks.stocks.length;
+
+      // Upcoming dividends
+      const divsContainer = document.getElementById('dividends-container');
+      if (divs.dividends.length === 0) {
+        divsContainer.innerHTML = '<div class="card" style="color:var(--text-secondary);">No upcoming dividends in the next 7 days.</div>';
+      } else {
+        let html = '<div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Company</th><th>Ex-Date</th><th>Dividend</th><th>Exchange</th></tr></thead><tbody>';
+        for (const d of divs.dividends) {
+          const amount = d.details?.amount ? `₹${d.details.amount}` : '—';
+          const co = d.stocks_master?.company_name || d.symbol;
+          const badge = d.stocks_master?.exchange || '—';
+          const badgeClass = badge === 'NSE' ? 'badge-nse' : badge === 'BSE' ? 'badge-bse' : 'badge-both';
+          html += `<tr><td><strong>${d.symbol}</strong></td><td>${co}</td><td>${formatDate(d.ex_date)}</td><td>${amount}</td><td><span class="badge ${badgeClass}">${badge}</span></td></tr>`;
+        }
+        html += '</tbody></table></div>';
+        divsContainer.innerHTML = html;
+      }
+
+      // My stocks
+      const myContainer = document.getElementById('my-stocks-container');
+      if (stocks.stocks.length === 0) {
+        myContainer.innerHTML = '<div class="card" style="color:var(--text-secondary);">No stocks selected. <a href="/stocks.html">Browse stocks</a> to add some.</div>';
+      } else {
+        let html = '<div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Company</th><th>Exchange</th><th>Sector</th></tr></thead><tbody>';
+        for (const s of stocks.stocks) {
+          const co = s.stocks_master?.company_name || s.symbol;
+          const ex = s.stocks_master?.exchange || '—';
+          const sec = s.stocks_master?.sector || '—';
+          html += `<tr><td><strong>${s.symbol}</strong></td><td>${co}</td><td>${ex}</td><td>${sec}</td></tr>`;
+        }
+        html += '</tbody></table></div>';
+        myContainer.innerHTML = html;
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alert Settings — Radarly</title>
+  <link rel="stylesheet" href="/assets/style.css" />
+  <style>
+    .pref-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+    .pref-info { flex: 1; }
+    .pref-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .pref-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    .pref-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .scope-select {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+      background: var(--surface);
+      cursor: pointer;
+    }
+    .scope-select:disabled { opacity: 0.5; cursor: not-allowed; }
+    .pref-status {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .inactive-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--bg);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .account-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px;
+    }
+    .account-info span { color: var(--text-secondary); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-brand" href="/dashboard.html">Radarly</a>
+    <div class="nav-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/stocks.html">Stocks</a>
+      <a href="/settings.html" class="active">Alerts</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="alert-box"></div>
+
+    <h1 class="page-title">Alert Settings</h1>
+
+    <!-- Account Info -->
+    <div class="section-title">Your Account</div>
+    <div class="card account-card" id="account-card" style="margin-bottom:24px;">
+      <div class="spinner" style="margin:0;"></div>
+    </div>
+
+    <!-- Active alerts -->
+    <div class="section-title">Active Alert Types</div>
+    <div id="active-prefs">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Upcoming alert types (inactive) -->
+    <div style="margin-top:24px;">
+      <div class="section-title">Coming Soon</div>
+      <div id="inactive-prefs"></div>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    const alertDescriptions = {
+      DIVIDEND:    'Get alerts 2 days before ex-dividend dates via WhatsApp.',
+      BONUS:       'Get notified when bonus shares are announced.',
+      SPLIT:       'Get notified about stock split events.',
+      RIGHTS:      'Get notified when rights issues are announced.',
+      BUYBACK:     'Get notified about share buyback events.',
+    };
+
+    (async () => {
+      const user = await requireLogin();
+      if (!user) return;
+
+      // Render account info
+      const accountCard = document.getElementById('account-card');
+      accountCard.innerHTML = `
+        <div class="account-info">
+          <div style="font-weight:600;font-size:16px;">${user.name || '—'}</div>
+          <span>${user.phone || '—'}</span>
+        </div>
+        <a href="/dashboard.html" class="btn btn-outline btn-sm">Dashboard</a>
+      `;
+
+      // Load preferences and alert_types
+      const [prefsRes, typesRes] = await Promise.all([
+        api('GET', '/api/user/preferences').catch(() => ({ preferences: [] })),
+        api('GET', '/api/stocks/sectors').catch(() => ({})), // just to ensure auth works
+      ]);
+
+      const prefs = prefsRes.preferences || [];
+
+      // Separate active vs inactive
+      const activePrefs = prefs.filter(p => p.alert_types?.is_active);
+      const inactivePrefs = prefs.filter(p => !p.alert_types?.is_active);
+
+      renderActivePrefs(activePrefs);
+      renderInactivePrefs(inactivePrefs);
+    })();
+
+    function renderActivePrefs(prefs) {
+      const container = document.getElementById('active-prefs');
+
+      if (prefs.length === 0) {
+        container.innerHTML = '<div class="card" style="color:var(--text-secondary);">No active alert types configured.</div>';
+        return;
+      }
+
+      let html = '';
+      for (const p of prefs) {
+        const code = p.alert_type;
+        const desc = alertDescriptions[code] || `Alerts for ${code} corporate actions.`;
+        const isEnabled = p.is_enabled;
+        const scope = p.scope || 'all_stocks';
+
+        html += `
+          <div class="card pref-card" id="pref-${code}">
+            <div class="pref-info">
+              <div class="pref-title">${formatAlertType(code)}</div>
+              <div class="pref-desc">${desc}</div>
+              <div class="pref-status" id="status-${code}"></div>
+            </div>
+            <div class="pref-controls">
+              <select class="scope-select" id="scope-${code}" ${!isEnabled ? 'disabled' : ''}
+                      onchange="updatePref('${code}')">
+                <option value="all_stocks" ${scope === 'all_stocks' ? 'selected' : ''}>All Stocks</option>
+                <option value="selected_stocks" ${scope === 'selected_stocks' ? 'selected' : ''}>My Stocks Only</option>
+              </select>
+              <label class="toggle">
+                <input type="checkbox" id="toggle-${code}" ${isEnabled ? 'checked' : ''}
+                       onchange="updatePref('${code}')" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    function renderInactivePrefs(prefs) {
+      const container = document.getElementById('inactive-prefs');
+
+      // Show all known inactive types
+      const inactiveCodes = ['BONUS', 'SPLIT', 'RIGHTS', 'BUYBACK'].filter(
+        code => !document.getElementById(`pref-${code}`)
+      );
+
+      if (inactiveCodes.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+      for (const code of inactiveCodes) {
+        const desc = alertDescriptions[code] || `Alerts for ${code} corporate actions.`;
+        html += `
+          <div class="card pref-card" style="opacity:0.6;">
+            <div class="pref-info">
+              <div class="pref-title">${formatAlertType(code)} <span class="inactive-badge">Coming Soon</span></div>
+              <div class="pref-desc">${desc}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    function formatAlertType(code) {
+      return code.charAt(0) + code.slice(1).toLowerCase() + ' Alerts';
+    }
+
+    async function updatePref(code) {
+      const toggle = document.getElementById(`toggle-${code}`);
+      const scopeSelect = document.getElementById(`scope-${code}`);
+      const statusEl = document.getElementById(`status-${code}`);
+
+      const isEnabled = toggle.checked;
+      const scope = scopeSelect.value;
+
+      // Enable/disable scope select based on toggle
+      scopeSelect.disabled = !isEnabled;
+
+      statusEl.textContent = 'Saving...';
+      statusEl.style.color = 'var(--text-secondary)';
+
+      try {
+        await api('PUT', '/api/user/preferences', {
+          alert_type: code,
+          is_enabled: isEnabled,
+          scope: scope,
+        });
+        statusEl.textContent = 'Saved';
+        statusEl.style.color = 'var(--success)';
+        setTimeout(() => { statusEl.textContent = ''; }, 2000);
+      } catch (err) {
+        statusEl.textContent = `Error: ${err.message}`;
+        statusEl.style.color = 'var(--danger)';
+      }
+    }
+  </script>
+</body>
+</html>

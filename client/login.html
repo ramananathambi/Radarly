@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Radarly</title>
+  <link rel="stylesheet" href="/assets/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-brand" href="/">Radarly</a>
+  </nav>
+  <div class="container" style="max-width:400px;margin-top:48px;">
+    <div class="card">
+      <h2 style="margin-bottom:8px;">Sign in to Radarly</h2>
+      <p style="color:var(--text-secondary);margin-bottom:24px;">Enter your phone number to get started</p>
+      <div id="alert-box"></div>
+
+      <form id="phone-form">
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input type="tel" id="phone" placeholder="+91 9876543210" required />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;" id="send-btn">Send OTP</button>
+      </form>
+
+      <div style="margin-top:24px;text-align:center;color:var(--text-secondary);font-size:13px;">
+        By signing in, you agree to receive WhatsApp alerts from Radarly.
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    // If already logged in, redirect
+    getMe().then(u => { if (u) window.location.href = '/dashboard.html'; });
+
+    const form = document.getElementById('phone-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('send-btn');
+      let phone = document.getElementById('phone').value.trim();
+
+      // Auto-format: if user enters 10 digits without +91
+      if (/^[6-9]\d{9}$/.test(phone)) phone = '+91' + phone;
+      if (!/^\+91[6-9]\d{9}$/.test(phone)) {
+        return showAlert('alert-box', 'Enter a valid Indian mobile number', 'error');
+      }
+
+      setLoading(btn, true);
+      try {
+        await api('POST', '/api/auth/otp/send', { phone });
+        // Store phone for verify page
+        localStorage.setItem('otp_phone', phone);
+        window.location.href = '/verify.html';
+      } catch (err) {
+        showAlert('alert-box', err.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+  </script>
+</body>
+</html>

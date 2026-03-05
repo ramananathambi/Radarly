@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify OTP — Radarly</title>
+  <link rel="stylesheet" href="/assets/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-brand" href="/">Radarly</a>
+  </nav>
+  <div class="container" style="max-width:400px;margin-top:48px;">
+    <div class="card">
+      <h2 style="margin-bottom:8px;">Enter OTP</h2>
+      <p style="color:var(--text-secondary);margin-bottom:24px;" id="subtitle">We sent a 6-digit code to your phone</p>
+      <div id="alert-box"></div>
+
+      <form id="otp-form">
+        <div class="form-group">
+          <label for="otp">OTP Code</label>
+          <input type="text" id="otp" placeholder="123456" maxlength="6" pattern="[0-9]{6}" required
+                 style="letter-spacing:8px;text-align:center;font-size:24px;font-weight:700;" />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;" id="verify-btn">Verify</button>
+      </form>
+
+      <div style="margin-top:16px;text-align:center;">
+        <button class="btn btn-outline btn-sm" id="resend-btn" disabled>Resend OTP</button>
+        <span id="timer" style="margin-left:8px;color:var(--text-secondary);font-size:13px;"></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    const phone = localStorage.getItem('otp_phone');
+    if (!phone) window.location.href = '/login.html';
+
+    // Show masked phone
+    document.getElementById('subtitle').textContent =
+      `We sent a 6-digit code to ${phone.slice(0, 4)}****${phone.slice(-3)}`;
+
+    // Focus OTP input
+    document.getElementById('otp').focus();
+
+    // Resend countdown
+    let countdown = 30;
+    const timerEl = document.getElementById('timer');
+    const resendBtn = document.getElementById('resend-btn');
+    const interval = setInterval(() => {
+      countdown--;
+      timerEl.textContent = `${countdown}s`;
+      if (countdown <= 0) {
+        clearInterval(interval);
+        timerEl.textContent = '';
+        resendBtn.disabled = false;
+      }
+    }, 1000);
+
+    resendBtn.addEventListener('click', async () => {
+      resendBtn.disabled = true;
+      try {
+        await api('POST', '/api/auth/otp/send', { phone });
+        showAlert('alert-box', 'New OTP sent!', 'success');
+      } catch (err) {
+        showAlert('alert-box', err.message, 'error');
+        resendBtn.disabled = false;
+      }
+    });
+
+    // Verify
+    document.getElementById('otp-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('verify-btn');
+      const otp = document.getElementById('otp').value.trim();
+      if (otp.length !== 6) return showAlert('alert-box', 'Enter 6-digit OTP', 'error');
+
+      setLoading(btn, true);
+      try {
+        const data = await api('POST', '/api/auth/otp/verify', { phone, otp });
+        setToken(data.session_token);
+        localStorage.removeItem('otp_phone');
+
+        if (data.needsOnboarding) {
+          window.location.href = '/onboarding.html';
+        } else {
+          window.location.href = '/dashboard.html';
+        }
+      } catch (err) {
+        showAlert('alert-box', err.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Radarly</title>
+  <link rel="stylesheet" href="/assets/style.css" />
+  <style>
+    .login-box {
+      max-width: 380px;
+      margin: 80px auto;
+      padding: 32px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-card { text-align: center; padding: 20px; }
+    .stat-value { font-size: 28px; font-weight: 800; color: var(--primary); }
+    .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+    .action-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-sent { background: #e6f4ea; color: var(--success); }
+    .status-failed { background: #fce8e6; color: var(--danger); }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-brand" href="/admin.html">Radarly Admin</a>
+    <div class="nav-links">
+      <a href="/admin.html" class="active">Admin</a>
+      <a href="#" id="admin-logout" style="color:var(--danger)">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="alert-box"></div>
+
+    <!-- Login screen -->
+    <div id="login-screen">
+      <div class="card login-box">
+        <h2 style="margin-bottom:16px;">Admin Login</h2>
+        <div class="form-group">
+          <label>Admin Password</label>
+          <input type="password" id="admin-password" placeholder="Enter admin password" />
+        </div>
+        <button class="btn btn-primary" style="width:100%;" onclick="adminLogin()">Login</button>
+      </div>
+    </div>
+
+    <!-- Admin dashboard (hidden until login) -->
+    <div id="admin-dashboard" style="display:none;">
+      <h1 class="page-title">Admin Dashboard</h1>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="card stat-card"><div class="spinner" style="margin:0 auto;"></div></div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-bar">
+        <button class="btn btn-primary" id="btn-fetch" onclick="triggerFetch()">Run Data Fetch (NSE + BSE)</button>
+        <button class="btn btn-outline" id="btn-alert" onclick="triggerAlert()">Run Alert Engine</button>
+        <button class="btn btn-outline" onclick="loadAll()">Refresh</button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('users')">Users</button>
+        <button class="tab-btn" onclick="switchTab('alerts')">Alert Log</button>
+        <button class="tab-btn" onclick="switchTab('actions')">Corporate Actions</button>
+      </div>
+
+      <div class="tab-content active" id="tab-users">
+        <div class="spinner"></div>
+      </div>
+      <div class="tab-content" id="tab-alerts">
+        <div class="spinner"></div>
+      </div>
+      <div class="tab-content" id="tab-actions">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    let adminToken = localStorage.getItem('admin_token') || '';
+    let usersPage = 1;
+    let alertsPage = 1;
+    let actionsPage = 1;
+
+    // Check if already logged in
+    if (adminToken) {
+      showDashboard();
+    }
+
+    document.getElementById('admin-password').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') adminLogin();
+    });
+
+    document.getElementById('admin-logout').addEventListener('click', (e) => {
+      e.preventDefault();
+      localStorage.removeItem('admin_token');
+      adminToken = '';
+      document.getElementById('admin-dashboard').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'block';
+      document.getElementById('admin-password').value = '';
+    });
+
+    async function adminApi(method, path, body) {
+      const opts = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` } };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(path, opts);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    async function adminLogin() {
+      const pw = document.getElementById('admin-password').value.trim();
+      if (!pw) return;
+      adminToken = pw;
+      try {
+        await adminApi('GET', '/api/admin/stats');
+        localStorage.setItem('admin_token', pw);
+        showDashboard();
+      } catch {
+        adminToken = '';
+        showAlert('alert-box', 'Invalid admin password', 'error');
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-dashboard').style.display = 'block';
+      loadAll();
+    }
+
+    async function loadAll() {
+      await Promise.all([loadStats(), loadUsers(), loadAlerts(), loadActions()]);
+    }
+
+    async function loadStats() {
+      try {
+        const s = await adminApi('GET', '/api/admin/stats');
+        document.getElementById('stats-grid').innerHTML = `
+          <div class="card stat-card"><div class="stat-value">${s.total_users}</div><div class="stat-label">Total Users</div></div>
+          <div class="card stat-card"><div class="stat-value">${s.total_stocks}</div><div class="stat-label">Stocks in Master</div></div>
+          <div class="card stat-card"><div class="stat-value">${s.alerts_sent_today}</div><div class="stat-label">Alerts Today</div></div>
+          <div class="card stat-card"><div class="stat-value">${s.alerts_sent_total}</div><div class="stat-label">Alerts Total</div></div>
+          <div class="card stat-card"><div class="stat-value">${s.actions_fetched_today}</div><div class="stat-label">Actions Fetched Today</div></div>
+        `;
+      } catch (err) {
+        document.getElementById('stats-grid').innerHTML = `<div class="card" style="color:var(--danger);">Failed to load stats</div>`;
+      }
+    }
+
+    // ─── Users tab ────────────────────────────────────────────────────────
+
+    async function loadUsers(page) {
+      if (page) usersPage = page;
+      const container = document.getElementById('tab-users');
+      container.innerHTML = '<div class="spinner"></div>';
+      try {
+        const data = await adminApi('GET', `/api/admin/users?page=${usersPage}`);
+        if (data.users.length === 0) {
+          container.innerHTML = '<div class="card" style="color:var(--text-secondary);">No users yet.</div>';
+          return;
+        }
+        let html = '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Verified</th><th>Joined</th></tr></thead><tbody>';
+        for (const u of data.users) {
+          html += `<tr>
+            <td>${u.name || '—'}</td>
+            <td>${u.phone || '—'}</td>
+            <td>${u.is_verified ? '<span style="color:var(--success);">Yes</span>' : 'No'}</td>
+            <td>${formatDate(u.created_at?.split('T')[0])}</td>
+          </tr>`;
+        }
+        html += '</tbody></table></div>';
+        html += renderAdminPagination(data.page, data.totalPages, 'loadUsers');
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = `<div class="card" style="color:var(--danger);">Error: ${err.message}</div>`;
+      }
+    }
+
+    // ─── Alert Log tab ──────────────────────────────────────────────────
+
+    async function loadAlerts(page) {
+      if (page) alertsPage = page;
+      const container = document.getElementById('tab-alerts');
+      container.innerHTML = '<div class="spinner"></div>';
+      try {
+        const data = await adminApi('GET', `/api/admin/alerts?page=${alertsPage}`);
+        if (data.alerts.length === 0) {
+          container.innerHTML = '<div class="card" style="color:var(--text-secondary);">No alerts sent yet.</div>';
+          return;
+        }
+        let html = '<div class="table-wrap"><table><thead><tr><th>User</th><th>Symbol</th><th>Type</th><th>Event Date</th><th>Status</th><th>Sent At</th></tr></thead><tbody>';
+        for (const a of data.alerts) {
+          const statusClass = a.status === 'sent' ? 'status-sent' : 'status-failed';
+          html += `<tr>
+            <td>${a.users?.name || '—'}<br><span style="font-size:12px;color:var(--text-secondary);">${a.users?.phone || ''}</span></td>
+            <td><strong>${a.symbol}</strong></td>
+            <td>${a.alert_type}</td>
+            <td>${formatDate(a.event_date)}</td>
+            <td><span class="status-badge ${statusClass}">${a.status}</span></td>
+            <td style="font-size:13px;">${a.sent_at ? new Date(a.sent_at + 'Z').toLocaleString('en-IN') : '—'}</td>
+          </tr>`;
+        }
+        html += '</tbody></table></div>';
+        html += renderAdminPagination(data.page, data.totalPages, 'loadAlerts');
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = `<div class="card" style="color:var(--danger);">Error: ${err.message}</div>`;
+      }
+    }
+
+    // ─── Corporate Actions tab ──────────────────────────────────────────
+
+    async function loadActions(page) {
+      if (page) actionsPage = page;
+      const container = document.getElementById('tab-actions');
+      container.innerHTML = '<div class="spinner"></div>';
+      try {
+        const data = await adminApi('GET', `/api/admin/actions?page=${actionsPage}`);
+        if (data.actions.length === 0) {
+          container.innerHTML = '<div class="card" style="color:var(--text-secondary);">No corporate actions fetched yet.</div>';
+          return;
+        }
+        let html = '<div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Type</th><th>Ex-Date</th><th>Record Date</th><th>Details</th><th>Fetched</th></tr></thead><tbody>';
+        for (const a of data.actions) {
+          const amount = a.details?.amount ? `₹${a.details.amount}` : '—';
+          html += `<tr>
+            <td><strong>${a.symbol}</strong></td>
+            <td>${a.action_type}</td>
+            <td>${formatDate(a.ex_date)}</td>
+            <td>${formatDate(a.record_date)}</td>
+            <td>${amount}</td>
+            <td style="font-size:13px;">${a.last_fetched ? formatDate(a.last_fetched.split('T')[0]) : '—'}</td>
+          </tr>`;
+        }
+        html += '</tbody></table></div>';
+        html += renderAdminPagination(data.page, data.totalPages, 'loadActions');
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = `<div class="card" style="color:var(--danger);">Error: ${err.message}</div>`;
+      }
+    }
+
+    // ─── Shared helpers ──────────────────────────────────────────────────
+
+    function renderAdminPagination(page, totalPages, fnName) {
+      if (totalPages <= 1) return '';
+      let html = '<div class="pagination" style="margin-top:12px;">';
+      html += `<button ${page <= 1 ? 'disabled' : ''} onclick="${fnName}(${page - 1})">Prev</button>`;
+      html += `<span style="font-size:13px;color:var(--text-secondary);">Page ${page} of ${totalPages}</span>`;
+      html += `<button ${page >= totalPages ? 'disabled' : ''} onclick="${fnName}(${page + 1})">Next</button>`;
+      html += '</div>';
+      return html;
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      const tabNames = ['users', 'alerts', 'actions'];
+      const idx = tabNames.indexOf(name);
+      document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+      document.getElementById(`tab-${name}`).classList.add('active');
+    }
+
+    async function triggerFetch() {
+      const btn = document.getElementById('btn-fetch');
+      setLoading(btn, true);
+      try {
+        const data = await adminApi('POST', '/api/admin/fetch');
+        showAlert('alert-box', data.message, 'success');
+      } catch (err) {
+        showAlert('alert-box', `Fetch failed: ${err.message}`, 'error');
+      }
+      setLoading(btn, false);
+    }
+
+    async function triggerAlert() {
+      const btn = document.getElementById('btn-alert');
+      setLoading(btn, true);
+      try {
+        const data = await adminApi('POST', '/api/admin/alert');
+        showAlert('alert-box', data.message, 'success');
+      } catch (err) {
+        showAlert('alert-box', `Alert run failed: ${err.message}`, 'error');
+      }
+      setLoading(btn, false);
+    }
+  </script>
+</body>
+</html>
