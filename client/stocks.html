@@ -26,11 +26,11 @@
       transition: all 0.15s;
       white-space: nowrap;
     }
-    .bookmark-btn:hover { border-color: var(--primary); }
+    .bookmark-btn:hover { border-color: var(--accent); }
     .bookmark-btn.saved {
-      background: var(--primary);
+      background: var(--accent);
       color: #fff;
-      border-color: var(--primary);
+      border-color: var(--accent);
     }
     .selected-count {
       font-size: 13px;
@@ -41,6 +41,16 @@
       font-size: 13px;
       color: var(--text-secondary);
       margin-bottom: 8px;
+    }
+    .price-cell {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .price-cell .no-price {
+      color: var(--text-secondary);
+      font-weight: 400;
+      font-size: 12px;
     }
   </style>
 </head>
@@ -202,7 +212,7 @@
       }
 
       let html = '<div class="table-wrap"><table><thead><tr>';
-      html += '<th>Symbol</th><th>Company</th><th>Exchange</th><th>Sector</th><th style="text-align:center;">Watchlist</th>';
+      html += '<th>Symbol</th><th>Company</th><th style="text-align:right;">LTP (₹)</th><th>Exchange</th><th>Sector</th><th style="text-align:center;">Watchlist</th>';
       html += '</tr></thead><tbody>';
 
       for (const s of stocks) {
@@ -212,9 +222,14 @@
         const badge = s.exchange || '—';
         const badgeClass = badge === 'NSE' ? 'badge-nse' : badge === 'BSE' ? 'badge-bse' : 'badge-both';
 
+        const priceDisplay = s.last_price
+          ? `₹${Number(s.last_price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : '<span class="no-price">—</span>';
+
         html += `<tr class="stock-row">`;
         html += `<td><strong>${s.symbol}</strong></td>`;
         html += `<td>${s.company_name || '—'}</td>`;
+        html += `<td class="price-cell" style="text-align:right;">${priceDisplay}</td>`;
         html += `<td><span class="badge ${badgeClass}">${badge}</span></td>`;
         html += `<td>${s.sector || '—'}</td>`;
         html += `<td style="text-align:center;"><button class="${btnClass}" onclick="toggleBookmark('${s.symbol}', this)">${btnText}</button></td>`;

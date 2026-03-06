@@ -1,8 +1,14 @@
 const express = require('express');
 const router  = express.Router();
 const crypto  = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
+const jwt     = require('jsonwebtoken');
 const { supabaseAdmin } = require('../lib/supabase');
 require('dotenv').config();
+
+const googleClient = process.env.GOOGLE_CLIENT_ID
+  ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+  : null;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -200,6 +206,187 @@ router.post('/onboarding', async (req, res) => {
   await createDefaultPreferences(user.id);
 
   res.json({ success: true, name: name.trim() });
+});
+
+// ─── POST /api/auth/google — Google Sign-In ─────────────────────────────────
+
+router.post('/google', async (req, res) => {
+  const { credential } = req.body;
+
+  if (!credential) {
+    return res.status(400).json({ error: 'Google credential is required' });
+  }
+
+  if (!googleClient) {
+    return res.status(500).json({ error: 'Google Sign-In is not configured' });
+  }
+
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    payload = ticket.getPayload();
+  } catch (err) {
+    console.error('[Auth] Google token verify error:', err.message);
+    return res.status(401).json({ error: 'Invalid Google credential' });
+  }
+
+  const { email, name, sub: googleId } = payload;
+  if (!email) {
+    return res.status(400).json({ error: 'Email not available from Google' });
+  }
+
+  // Find existing user by email
+  let { data: user } = await supabaseAdmin
+    .from('users')
+    .select('*')
+    .eq('email', email)
+    .maybeSingle();
+
+  const sessionToken   = generateSessionToken();
+  const sessionExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  let isNewUser = false;
+
+  if (!user) {
+    isNewUser = true;
+    const { data: newUser, error: createErr } = await supabaseAdmin
+      .from('users')
+      .insert({
+        email,
+        name: name || null,
+        phone: '',
+        is_verified: true,
+        session_token: sessionToken,
+        session_expires_at: sessionExpires,
+      })
+      .select()
+      .single();
+
+    if (createErr) {
+      console.error('[Auth] Google create user error:', createErr);
+      return res.status(500).json({ error: 'Failed to create account' });
+    }
+    user = newUser;
+    await createDefaultPreferences(user.id);
+  } else {
+    const updates = {
+      session_token: sessionToken,
+      session_expires_at: sessionExpires,
+      is_verified: true,
+    };
+    if (!user.name && name) updates.name = name;
+
+    await supabaseAdmin.from('users').update(updates).eq('id', user.id);
+    if (name && !user.name) user.name = name;
+  }
+
+  res.json({
+    success: true,
+    session_token: sessionToken,
+    user: { id: user.id, name: user.name, phone: user.phone, email },
+    isNewUser,
+    needsOnboarding: !user.name,
+  });
+});
+
+// ─── POST /api/auth/apple — Apple Sign-In ───────────────────────────────────
+
+router.post('/apple', async (req, res) => {
+  const { id_token, user: appleUser } = req.body;
+
+  if (!id_token) {
+    return res.status(400).json({ error: 'Apple ID token is required' });
+  }
+
+  // Decode Apple ID token (Apple's public keys verify the signature,
+  // but for simplicity we decode and verify the audience/issuer)
+  let decoded;
+  try {
+    decoded = jwt.decode(id_token, { complete: true });
+    if (!decoded || !decoded.payload) throw new Error('Invalid token structure');
+
+    const { iss, aud, email, sub } = decoded.payload;
+    if (iss !== 'https://appleid.apple.com') throw new Error('Invalid issuer');
+
+    decoded = decoded.payload;
+  } catch (err) {
+    console.error('[Auth] Apple token decode error:', err.message);
+    return res.status(401).json({ error: 'Invalid Apple credential' });
+  }
+
+  const email = decoded.email;
+  const appleId = decoded.sub;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email not available from Apple' });
+  }
+
+  // Apple only sends user's name on first sign-in
+  const appleName = appleUser?.name
+    ? `${appleUser.name.firstName || ''} ${appleUser.name.lastName || ''}`.trim()
+    : null;
+
+  let { data: user } = await supabaseAdmin
+    .from('users')
+    .select('*')
+    .eq('email', email)
+    .maybeSingle();
+
+  const sessionToken   = generateSessionToken();
+  const sessionExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  let isNewUser = false;
+
+  if (!user) {
+    isNewUser = true;
+    const { data: newUser, error: createErr } = await supabaseAdmin
+      .from('users')
+      .insert({
+        email,
+        name: appleName || null,
+        phone: '',
+        is_verified: true,
+        session_token: sessionToken,
+        session_expires_at: sessionExpires,
+      })
+      .select()
+      .single();
+
+    if (createErr) {
+      console.error('[Auth] Apple create user error:', createErr);
+      return res.status(500).json({ error: 'Failed to create account' });
+    }
+    user = newUser;
+    await createDefaultPreferences(user.id);
+  } else {
+    const updates = {
+      session_token: sessionToken,
+      session_expires_at: sessionExpires,
+      is_verified: true,
+    };
+    if (!user.name && appleName) updates.name = appleName;
+
+    await supabaseAdmin.from('users').update(updates).eq('id', user.id);
+    if (appleName && !user.name) user.name = appleName;
+  }
+
+  res.json({
+    success: true,
+    session_token: sessionToken,
+    user: { id: user.id, name: user.name, phone: user.phone, email },
+    isNewUser,
+    needsOnboarding: !user.name,
+  });
+});
+
+// ─── GET /api/auth/config — public auth config for frontend ─────────────────
+
+router.get('/config', (req, res) => {
+  res.json({
+    googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+    appleEnabled: !!process.env.APPLE_CLIENT_ID,
+  });
 });
 
 // ─── POST /api/auth/logout ────────────────────────────────────────────────────

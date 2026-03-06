@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
 
   let query = supabaseAdmin
     .from('stocks_master')
-    .select('symbol, company_name, exchange, sector, industry', { count: 'exact' })
+    .select('symbol, company_name, exchange, sector, industry, last_price, price_updated_at', { count: 'exact' })
     .eq('is_active', true)
     .order('symbol')
     .range(offset, offset + PAGE_SIZE - 1);
@@ -47,7 +47,7 @@ router.get('/search', async (req, res) => {
 
   const { data, error } = await supabaseAdmin
     .from('stocks_master')
-    .select('symbol, company_name, exchange, sector')
+    .select('symbol, company_name, exchange, sector, last_price, price_updated_at')
     .eq('is_active', true)
     .or(`symbol.ilike.%${q}%,company_name.ilike.%${q}%`)
     .order('symbol')

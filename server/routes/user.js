@@ -15,7 +15,7 @@ router.get('/stocks', async (req, res) => {
     .select(`
       symbol,
       added_at,
-      stocks_master ( company_name, exchange, sector )
+      stocks_master ( company_name, exchange, sector, last_price, price_updated_at )
     `)
     .eq('user_id', req.user.id)
     .order('added_at', { ascending: false });

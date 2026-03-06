@@ -5,6 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login — Radarly</title>
   <link rel="stylesheet" href="/assets/style.css" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 24px 0;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .divider span { padding: 0 12px; }
+    .social-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      color: var(--text);
+    }
+    .social-btn:hover {
+      border-color: var(--text-secondary);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .social-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .social-btn svg { flex-shrink: 0; }
+    .social-btns { display: flex; flex-direction: column; gap: 12px; }
+  </style>
 </head>
 <body>
   <nav class="nav">
@@ -13,9 +57,32 @@
   <div class="container" style="max-width:400px;margin-top:48px;">
     <div class="card">
       <h2 style="margin-bottom:8px;">Sign in to Radarly</h2>
-      <p style="color:var(--text-secondary);margin-bottom:24px;">Enter your phone number to get started</p>
+      <p style="color:var(--text-secondary);margin-bottom:24px;">Choose your preferred sign-in method</p>
       <div id="alert-box"></div>
 
+      <!-- Social Sign-In Buttons -->
+      <div class="social-btns">
+        <button class="social-btn" id="google-btn" onclick="googleSignIn()">
+          <svg width="18" height="18" viewBox="0 0 18 18">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          Continue with Google
+        </button>
+
+        <button class="social-btn" id="apple-btn" onclick="appleSignIn()">
+          <svg width="18" height="18" viewBox="0 0 18 18">
+            <path fill="#000" d="M14.94 9.88c-.02-2.1 1.72-3.12 1.8-3.17-0.98-1.43-2.5-1.63-3.04-1.65-1.3-.13-2.53.76-3.18.76-.66 0-1.67-.74-2.74-.72-1.41.02-2.71.82-3.44 2.08-1.47 2.54-.37 6.31 1.05 8.38.7 1.01 1.53 2.15 2.63 2.11 1.05-.04 1.45-.68 2.73-.68 1.27 0 1.64.68 2.75.66 1.14-.02 1.85-1.03 2.54-2.04.8-1.17 1.13-2.3 1.15-2.36-.03-.01-2.2-.84-2.22-3.35zM12.87 3.53c.58-.7.97-1.68.86-2.65-.83.03-1.84.55-2.44 1.25-.53.62-1 1.6-.87 2.55.93.07 1.87-.47 2.45-1.15z"/>
+          </svg>
+          Continue with Apple
+        </button>
+      </div>
+
+      <div class="divider"><span>or</span></div>
+
+      <!-- Phone OTP -->
       <form id="phone-form">
         <div class="form-group">
           <label for="phone">Phone Number</label>
@@ -35,6 +102,90 @@
     // If already logged in, redirect
     getMe().then(u => { if (u) window.location.href = '/dashboard.html'; });
 
+    // ─── Google Sign-In ───────────────────────────────────────────────
+    let googleInitialized = false;
+
+    function initGoogle() {
+      if (googleInitialized) return;
+      // Check if GOOGLE_CLIENT_ID is available via a meta tag or config endpoint
+      const clientId = document.querySelector('meta[name="google-client-id"]')?.content;
+      if (!clientId) {
+        console.log('[Auth] Google Client ID not configured');
+        return;
+      }
+
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleResponse,
+        auto_select: false,
+      });
+      googleInitialized = true;
+    }
+
+    async function googleSignIn() {
+      const clientId = document.querySelector('meta[name="google-client-id"]')?.content;
+      if (!clientId) {
+        // Fallback: try fetching config from server
+        try {
+          const cfg = await fetch('/api/auth/config').then(r => r.json());
+          if (cfg.googleClientId) {
+            google.accounts.id.initialize({
+              client_id: cfg.googleClientId,
+              callback: handleGoogleResponse,
+            });
+            google.accounts.id.prompt();
+            return;
+          }
+        } catch {}
+        return showAlert('alert-box', 'Google Sign-In is not yet configured. Please use phone login.', 'error');
+      }
+
+      if (!googleInitialized) initGoogle();
+      google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          // One Tap not available, try popup
+          google.accounts.id.prompt();
+        }
+      });
+    }
+
+    async function handleGoogleResponse(response) {
+      const btn = document.getElementById('google-btn');
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+
+      try {
+        const data = await api('POST', '/api/auth/google', {
+          credential: response.credential,
+        });
+        setToken(data.session_token);
+        if (data.needsOnboarding) {
+          window.location.href = '/onboarding.html';
+        } else {
+          window.location.href = '/dashboard.html';
+        }
+      } catch (err) {
+        showAlert('alert-box', err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg> Continue with Google`;
+      }
+    }
+
+    // ─── Apple Sign-In ────────────────────────────────────────────────
+    async function appleSignIn() {
+      // Apple Sign-In requires HTTPS and Apple Developer configuration
+      // For now, show a helpful message
+      try {
+        const cfg = await fetch('/api/auth/config').then(r => r.json());
+        if (!cfg.appleEnabled) {
+          return showAlert('alert-box', 'Apple Sign-In is not yet configured. Please use Google or phone login.', 'error');
+        }
+      } catch {
+        return showAlert('alert-box', 'Apple Sign-In is not yet configured. Please use Google or phone login.', 'error');
+      }
+    }
+
+    // ─── Phone OTP ────────────────────────────────────────────────────
     const form = document.getElementById('phone-form');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -50,7 +201,6 @@
       setLoading(btn, true);
       try {
         await api('POST', '/api/auth/otp/send', { phone });
-        // Store phone for verify page
         localStorage.setItem('otp_phone', phone);
         window.location.href = '/verify.html';
       } catch (err) {
@@ -58,6 +208,11 @@
       } finally {
         setLoading(btn, false);
       }
+    });
+
+    // Try initializing Google on load
+    window.addEventListener('load', () => {
+      setTimeout(initGoogle, 500);
     });
   </script>
 </body>
