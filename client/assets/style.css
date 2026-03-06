@@ -192,8 +192,62 @@ tr:hover td { background: #f3f4f6; }
   border-top: 1px solid var(--border);
 }
 
+/* Mobile hamburger toggle — hidden on desktop, injected by app.js */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 /* Responsive */
-@media (max-width: 600px) {
-  .nav-links { gap: 12px; }
+@media (max-width: 768px) {
+  .nav {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 56px;
+    padding: 0 12px;
+  }
+  .nav-toggle {
+    display: flex;
+    order: 1;
+  }
+  .nav-brand {
+    order: 2;
+    flex: 1;
+    text-align: center;
+    padding-right: 40px; /* offset hamburger width to keep logo centered */
+  }
+  .nav-links {
+    display: none;
+    order: 3;
+    flex-basis: 100%;
+    flex-direction: column;
+    gap: 0;
+    padding: 4px 0 12px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+  .nav-links.open {
+    display: flex;
+  }
+  .nav-links a {
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 15px;
+    border-radius: 8px;
+  }
+  .nav-links a:hover {
+    background: rgba(255,255,255,0.06);
+  }
   .container { padding: 16px 12px; }
+  .page-title { font-size: 20px; }
 }

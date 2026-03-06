@@ -81,3 +81,31 @@ function setupNav(activePage) {
     else a.classList.remove('active');
   });
 }
+
+// ─── Mobile hamburger menu ──────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  const nav = document.querySelector('.nav');
+  const navLinks = nav?.querySelector('.nav-links');
+  if (!nav || !navLinks) return;
+
+  // Create hamburger button
+  const toggle = document.createElement('button');
+  toggle.className = 'nav-toggle';
+  toggle.setAttribute('aria-label', 'Toggle menu');
+  toggle.innerHTML = '&#9776;'; // ☰
+  nav.insertBefore(toggle, nav.firstChild);
+
+  toggle.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+    toggle.innerHTML = navLinks.classList.contains('open') ? '&#10005;' : '&#9776;'; // ✕ or ☰
+  });
+
+  // Close menu when a link is clicked
+  navLinks.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      navLinks.classList.remove('open');
+      toggle.innerHTML = '&#9776;';
+    });
+  });
+});
