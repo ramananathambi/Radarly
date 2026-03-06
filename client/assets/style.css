@@ -1,11 +1,10 @@
 /* Radarly — Global Styles */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
   --primary: #1a1a1a;
   --primary-dark: #000000;
-  --accent: #e63946;
-  --accent-hover: #c5303c;
+  --accent: #cc0000;
+  --accent-hover: #a30000;
   --success: #22c55e;
   --danger: #ef4444;
   --warning: #f59e0b;
@@ -22,7 +21,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
@@ -103,7 +102,7 @@ a:hover { text-decoration: underline; }
 }
 .form-group input:focus, .form-group select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(230,57,70,0.1);
+  box-shadow: 0 0 0 3px rgba(204,0,0,0.1);
 }
 
 /* Tables */
@@ -182,6 +181,16 @@ tr:hover td { background: #f3f4f6; }
 .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
 .pagination button:disabled:hover { border-color: var(--border); }
 .pagination button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Footer */
+.site-footer {
+  text-align: center;
+  padding: 32px 16px;
+  margin-top: 48px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  border-top: 1px solid var(--border);
+}
 
 /* Responsive */
 @media (max-width: 600px) {
