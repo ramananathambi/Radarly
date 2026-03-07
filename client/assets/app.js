@@ -82,7 +82,7 @@ function setupNav(activePage) {
   });
 }
 
-// ─── Mobile hamburger menu ──────────────────────────────────────────────────
+// ─── Mobile sidebar menu ────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
   const nav = document.querySelector('.nav');
@@ -96,16 +96,31 @@ document.addEventListener('DOMContentLoaded', () => {
   toggle.innerHTML = '&#9776;'; // ☰
   nav.insertBefore(toggle, nav.firstChild);
 
+  // Create overlay for closing sidebar
+  const overlay = document.createElement('div');
+  overlay.className = 'nav-overlay';
+  document.body.appendChild(overlay);
+
+  function openMenu() {
+    navLinks.classList.add('open');
+    overlay.classList.add('open');
+    toggle.innerHTML = '&#10005;'; // ✕
+  }
+
+  function closeMenu() {
+    navLinks.classList.remove('open');
+    overlay.classList.remove('open');
+    toggle.innerHTML = '&#9776;'; // ☰
+  }
+
   toggle.addEventListener('click', () => {
-    navLinks.classList.toggle('open');
-    toggle.innerHTML = navLinks.classList.contains('open') ? '&#10005;' : '&#9776;'; // ✕ or ☰
+    navLinks.classList.contains('open') ? closeMenu() : openMenu();
   });
+
+  overlay.addEventListener('click', closeMenu);
 
   // Close menu when a link is clicked
   navLinks.querySelectorAll('a').forEach(a => {
-    a.addEventListener('click', () => {
-      navLinks.classList.remove('open');
-      toggle.innerHTML = '&#9776;';
-    });
+    a.addEventListener('click', closeMenu);
   });
 });
