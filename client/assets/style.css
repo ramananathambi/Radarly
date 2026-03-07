@@ -1,7 +1,7 @@
 /* Radarly — Global Styles */
 
 :root {
-  --primary: #1a1a1a;
+  --primary: #000000;
   --primary-dark: #000000;
   --accent: #cc0000;
   --accent-hover: #a30000;
@@ -45,8 +45,9 @@ a:hover { text-decoration: underline; }
   z-index: 100;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
-.nav-brand { font-weight: 800; font-size: 22px; color: #ffffff; letter-spacing: -0.02em; }
+.nav-brand { display: flex; align-items: center; gap: 8px; color: #ffffff; font-weight: 800; font-size: 22px; letter-spacing: -0.02em; }
 .nav-brand:hover { text-decoration: none; color: #ffffff; }
+.nav-logo { height: 36px; width: auto; display: block; }
 .nav-links { display: flex; gap: 24px; }
 .nav-links a { color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 500; transition: color 0.2s; }
 .nav-links a:hover { color: #ffffff; text-decoration: none; }
