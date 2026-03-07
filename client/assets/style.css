@@ -230,6 +230,8 @@ tr:hover td { background: #f3f4f6; }
   }
   .nav-toggle {
     display: flex;
+    position: absolute;
+    left: 12px;
   }
   .nav-brand {
     position: absolute;
