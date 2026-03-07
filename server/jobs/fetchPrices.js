@@ -12,7 +12,7 @@
  */
 
 const axios = require('axios');
-const { supabaseAdmin } = require('../lib/supabase');
+const { pool } = require('../lib/db');
 
 const NSE_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -98,27 +98,30 @@ async function fetchPrices() {
 
   console.log(`[Prices] Total unique prices: ${priceMap.size}`);
 
-  // Batch update stocks_master
-  const now = new Date().toISOString();
-  const updates = Array.from(priceMap.values()).map(s => ({
-    symbol: s.symbol,
-    last_price: s.lastPrice,
-    price_updated_at: now,
-  }));
+  // Batch update stocks_master using multi-row INSERT ON DUPLICATE KEY UPDATE
+  const now = new Date();
+  const updates = Array.from(priceMap.values());
 
   const batchSize = 200;
   let totalUpdated = 0;
 
   for (let i = 0; i < updates.length; i += batchSize) {
     const batch = updates.slice(i, i + batchSize);
-    const { error } = await supabaseAdmin
-      .from('stocks_master')
-      .upsert(batch, { onConflict: 'symbol', ignoreDuplicates: false });
+    const placeholders = batch.map(() => '(?, ?, ?)').join(', ');
+    const values = batch.flatMap(s => [s.symbol, s.lastPrice, now]);
 
-    if (error) {
-      console.error(`[Prices] Upsert batch ${Math.floor(i / batchSize) + 1} error:`, error.message);
-    } else {
+    try {
+      await pool.query(
+        `INSERT INTO stocks_master (symbol, last_price, price_updated_at)
+         VALUES ${placeholders}
+         ON DUPLICATE KEY UPDATE
+           last_price = VALUES(last_price),
+           price_updated_at = VALUES(price_updated_at)`,
+        values
+      );
       totalUpdated += batch.length;
+    } catch (err) {
+      console.error(`[Prices] Upsert batch ${Math.floor(i / batchSize) + 1} error:`, err.message);
     }
   }
 

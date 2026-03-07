@@ -1,6 +1,6 @@
-const express        = require('express');
-const router         = express.Router();
-const { supabaseAdmin } = require('../lib/supabase');
+const express = require('express');
+const router  = express.Router();
+const { pool } = require('../lib/db');
 
 /**
  * POST /api/webhooks/twilio
@@ -25,27 +25,27 @@ router.post('/twilio', async (req, res) => {
   }
 
   if (body === 'STOP') {
-    // Find user by phone
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, name')
-      .eq('phone', phone)
-      .maybeSingle();
+    try {
+      // Find user by phone
+      const [rows] = await pool.execute(
+        'SELECT id, name FROM users WHERE phone = ?',
+        [phone]
+      );
+      const user = rows[0] || null;
 
-    if (user) {
-      // Disable all alert preferences for this user
-      const { error } = await supabaseAdmin
-        .from('user_alert_preferences')
-        .update({ is_enabled: false, updated_at: new Date().toISOString() })
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error(`[Webhook] Failed to unsubscribe ${phone}:`, error.message);
-      } else {
+      if (user) {
+        // Disable all alert preferences for this user
+        await pool.execute(
+          `UPDATE user_alert_preferences SET is_enabled = 0, updated_at = NOW()
+           WHERE user_id = ?`,
+          [user.id]
+        );
         console.log(`[Webhook] Unsubscribed ${phone} (user: ${user.name || user.id})`);
+      } else {
+        console.log(`[Webhook] STOP from unknown phone: ${phone}`);
       }
-    } else {
-      console.log(`[Webhook] STOP from unknown phone: ${phone}`);
+    } catch (err) {
+      console.error(`[Webhook] Failed to unsubscribe ${phone}:`, err.message);
     }
 
     // Twilio expects TwiML response — send empty response to acknowledge

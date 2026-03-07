@@ -1,4 +1,4 @@
-const { supabaseAdmin } = require('../lib/supabase');
+const { pool } = require('../lib/db');
 
 async function requireAuth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -7,19 +7,27 @@ async function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { data: user, error } = await supabaseAdmin
-    .from('users')
-    .select('id, name, phone, email, is_verified')
-    .eq('session_token', token)
-    .gt('session_expires_at', new Date().toISOString().replace('Z', ''))
-    .maybeSingle();
+  try {
+    const [rows] = await pool.execute(
+      `SELECT id, name, phone, email, is_verified
+       FROM users
+       WHERE session_token = ? AND session_expires_at > NOW()`,
+      [token]
+    );
 
-  if (error || !user) {
-    return res.status(401).json({ error: 'Invalid or expired session' });
+    const user = rows[0] || null;
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+
+    user.is_verified = !!user.is_verified;
+    req.user = user;
+    next();
+  } catch (err) {
+    console.error('[Auth] DB error:', err.message);
+    return res.status(500).json({ error: 'Authentication failed' });
   }
-
-  req.user = user;
-  next();
 }
 
 module.exports = { requireAuth };

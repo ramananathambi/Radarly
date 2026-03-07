@@ -15,12 +15,18 @@
 
 require('dotenv').config();
 const axios = require('axios');
-const { createClient } = require('@supabase/supabase-js');
+const mysql = require('mysql2/promise');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+const pool = mysql.createPool({
+  host:     process.env.MYSQL_HOST,
+  user:     process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
+  port:     parseInt(process.env.MYSQL_PORT) || 3306,
+  waitForConnections: true,
+  connectionLimit:    5,
+  queueLimit:         0,
+});
 
 const useStaticOnly = process.argv.includes('--static');
 
@@ -625,7 +631,7 @@ function getStaticStocks() {
   return unique.map(s => ({ ...s, exchange: s.exchange || 'NSE', is_active: true }));
 }
 
-// ─── Upsert to Supabase ────────────────────────────────────────────────────
+// ─── Upsert to MySQL ────────────────────────────────────────────────────────
 
 async function upsertStocks(stocks) {
   if (stocks.length === 0) {
@@ -638,15 +644,30 @@ async function upsertStocks(stocks) {
 
   for (let i = 0; i < stocks.length; i += batchSize) {
     const batch = stocks.slice(i, i + batchSize);
-    const { error } = await supabase
-      .from('stocks_master')
-      .upsert(batch, { onConflict: 'symbol', ignoreDuplicates: false });
+    const placeholders = batch.map(() => '(?, ?, ?, ?, ?)').join(', ');
+    const values = batch.flatMap(s => [
+      s.symbol,
+      s.company_name || null,
+      s.exchange || 'NSE',
+      s.sector || null,
+      s.is_active !== undefined ? (s.is_active ? 1 : 0) : 1,
+    ]);
 
-    if (error) {
-      console.error(`[Seed] Upsert error (batch ${Math.floor(i / batchSize) + 1}):`, error.message);
-    } else {
+    try {
+      await pool.query(
+        `INSERT INTO stocks_master (symbol, company_name, exchange, sector, is_active)
+         VALUES ${placeholders}
+         ON DUPLICATE KEY UPDATE
+           company_name = VALUES(company_name),
+           exchange     = VALUES(exchange),
+           sector       = VALUES(sector),
+           is_active    = VALUES(is_active)`,
+        values
+      );
       total += batch.length;
       console.log(`[Seed] Upserted batch ${Math.floor(i / batchSize) + 1}: ${batch.length} stocks`);
+    } catch (err) {
+      console.error(`[Seed] Upsert error (batch ${Math.floor(i / batchSize) + 1}):`, err.message);
     }
   }
 
@@ -701,6 +722,7 @@ async function main() {
   await upsertStocks(unique);
 
   console.log('\n[Seed] Done!');
+  await pool.end();
   process.exit(0);
 }
 

@@ -12,7 +12,7 @@
  *   5. Log to alert_log (sent or failed)
  */
 
-const { supabaseAdmin } = require('../lib/supabase');
+const { pool } = require('../lib/db');
 const { buildMessage }  = require('../lib/alertRouter');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -41,10 +41,9 @@ async function runAlertEngine() {
   console.log(`[AlertEngine] Running for ex_date = ${targetDate}`);
 
   // Step 1: fetch all active DIVIDEND alert types (extensible — reads from DB)
-  const { data: activeTypes } = await supabaseAdmin
-    .from('alert_types')
-    .select('code')
-    .eq('is_active', true);
+  const [activeTypes] = await pool.execute(
+    'SELECT code FROM alert_types WHERE is_active = 1'
+  );
 
   const activeCodes = (activeTypes || []).map(t => t.code);
   if (!activeCodes.includes('DIVIDEND')) {
@@ -52,20 +51,15 @@ async function runAlertEngine() {
     return;
   }
 
-  // Step 2: fetch corporate actions for T-2 date
-  const { data: actions, error: actionsErr } = await supabaseAdmin
-    .from('corporate_actions')
-    .select(`
-      id, symbol, action_type, ex_date, record_date, details,
-      stocks_master ( company_name, exchange )
-    `)
-    .eq('action_type', 'DIVIDEND')
-    .eq('ex_date', targetDate);
-
-  if (actionsErr) {
-    console.error('[AlertEngine] Failed to fetch actions:', actionsErr.message);
-    throw actionsErr;
-  }
+  // Step 2: fetch corporate actions for T-2 date with stock details
+  const [actions] = await pool.execute(
+    `SELECT ca.symbol, ca.action_type, ca.ex_date, ca.record_date, ca.details,
+            sm.company_name, sm.exchange
+     FROM corporate_actions ca
+     JOIN stocks_master sm ON ca.symbol = sm.symbol
+     WHERE ca.action_type = 'DIVIDEND' AND ca.ex_date = ?`,
+    [targetDate]
+  );
 
   if (!actions || actions.length === 0) {
     console.log(`[AlertEngine] No DIVIDEND actions for ${targetDate}`);
@@ -80,8 +74,12 @@ async function runAlertEngine() {
     // Enrich action with company details for the message template
     const enrichedAction = {
       ...action,
-      company_name: action.stocks_master?.company_name || action.symbol,
-      exchange:     action.stocks_master?.exchange     || 'NSE/BSE',
+      company_name: action.company_name || action.symbol,
+      exchange:     action.exchange     || 'NSE/BSE',
+      stocks_master: {
+        company_name: action.company_name,
+        exchange:     action.exchange,
+      },
     };
 
     // Step 3: find eligible users for this action
@@ -89,16 +87,13 @@ async function runAlertEngine() {
 
     for (const user of eligibleUsers) {
       // Step 4: deduplication check
-      const { data: existing } = await supabaseAdmin
-        .from('alert_log')
-        .select('id')
-        .eq('user_id',    user.id)
-        .eq('symbol',     action.symbol)
-        .eq('alert_type', 'DIVIDEND')
-        .eq('event_date', action.ex_date)
-        .maybeSingle();
+      const [existingRows] = await pool.execute(
+        `SELECT user_id FROM alert_log
+         WHERE user_id = ? AND symbol = ? AND alert_type = 'DIVIDEND' AND event_date = ?`,
+        [user.id, action.symbol, action.ex_date]
+      );
 
-      if (existing) {
+      if (existingRows.length > 0) {
         skipped++;
         continue;
       }
@@ -120,15 +115,12 @@ async function runAlertEngine() {
       }
 
       // Step 6: log to alert_log regardless of send outcome
-      await supabaseAdmin
-        .from('alert_log')
-        .upsert({
-          user_id:    user.id,
-          symbol:     action.symbol,
-          alert_type: 'DIVIDEND',
-          event_date: action.ex_date,
-          status,
-        }, { onConflict: 'user_id,symbol,alert_type,event_date', ignoreDuplicates: false });
+      await pool.execute(
+        `INSERT INTO alert_log (user_id, symbol, alert_type, event_date, status)
+         VALUES (?, ?, 'DIVIDEND', ?, ?)
+         ON DUPLICATE KEY UPDATE status = VALUES(status), sent_at = NOW()`,
+        [user.id, action.symbol, action.ex_date, status]
+      );
     }
   }
 
@@ -140,44 +132,45 @@ async function runAlertEngine() {
 
 async function getEligibleUsers(symbol, alertType) {
   // Users with 'all_stocks' scope — get all of them with pref enabled
-  const { data: allStocksUsers } = await supabaseAdmin
-    .from('user_alert_preferences')
-    .select('user_id, users ( id, name, phone, is_verified )')
-    .eq('alert_type',  alertType)
-    .eq('scope',       'all_stocks')
-    .eq('is_enabled',  true);
+  const [allStocksRows] = await pool.execute(
+    `SELECT u.id, u.name, u.phone, u.is_verified
+     FROM user_alert_preferences uap
+     JOIN users u ON uap.user_id = u.id
+     WHERE uap.alert_type = ? AND uap.scope = 'all_stocks' AND uap.is_enabled = 1`,
+    [alertType]
+  );
 
   // Users with 'selected_stocks' scope — only if they bookmarked this symbol
-  const { data: selectedStocksUsers } = await supabaseAdmin
-    .from('user_alert_preferences')
-    .select('user_id, users ( id, name, phone, is_verified )')
-    .eq('alert_type', alertType)
-    .eq('scope',      'selected_stocks')
-    .eq('is_enabled', true);
+  const [selectedStocksRows] = await pool.execute(
+    `SELECT u.id, u.name, u.phone, u.is_verified
+     FROM user_alert_preferences uap
+     JOIN users u ON uap.user_id = u.id
+     WHERE uap.alert_type = ? AND uap.scope = 'selected_stocks' AND uap.is_enabled = 1`,
+    [alertType]
+  );
 
   // Filter selected_stocks users to those who have this symbol bookmarked
-  const selectedUserIds = (selectedStocksUsers || []).map(p => p.user_id);
-
   let qualifiedSelected = [];
-  if (selectedUserIds.length > 0) {
-    const { data: bookmarked } = await supabaseAdmin
-      .from('user_stocks')
-      .select('user_id')
-      .eq('symbol', symbol)
-      .in('user_id', selectedUserIds);
+  if (selectedStocksRows.length > 0) {
+    const selectedUserIds = selectedStocksRows.map(u => u.id);
+    const placeholders = selectedUserIds.map(() => '?').join(',');
 
-    const bookmarkedIds = new Set((bookmarked || []).map(b => b.user_id));
-    qualifiedSelected = (selectedStocksUsers || []).filter(p => bookmarkedIds.has(p.user_id));
+    const [bookmarked] = await pool.query(
+      `SELECT user_id FROM user_stocks WHERE symbol = ? AND user_id IN (${placeholders})`,
+      [symbol, ...selectedUserIds]
+    );
+
+    const bookmarkedIds = new Set(bookmarked.map(b => b.user_id));
+    qualifiedSelected = selectedStocksRows.filter(u => bookmarkedIds.has(u.id));
   }
 
   // Merge both groups, deduplicate by user_id, filter verified users with phone
-  const allPrefs = [...(allStocksUsers || []), ...qualifiedSelected];
+  const allUsers = [...allStocksRows, ...qualifiedSelected];
   const seen     = new Set();
   const users    = [];
 
-  for (const pref of allPrefs) {
-    const u = pref.users;
-    if (!u || !u.phone || !u.is_verified) continue;
+  for (const u of allUsers) {
+    if (!u.phone || !u.is_verified) continue;
     if (seen.has(u.id)) continue;
     seen.add(u.id);
     users.push(u);

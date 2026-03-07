@@ -3,7 +3,7 @@ const router  = express.Router();
 const crypto  = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const jwt     = require('jsonwebtoken');
-const { supabaseAdmin } = require('../lib/supabase');
+const { pool } = require('../lib/db');
 require('dotenv').config();
 
 const googleClient = process.env.GOOGLE_CLIENT_ID
@@ -38,14 +38,11 @@ async function sendOTP(phone, otp) {
 }
 
 async function createDefaultPreferences(userId) {
-  await supabaseAdmin
-    .from('user_alert_preferences')
-    .upsert({
-      user_id:    userId,
-      alert_type: 'DIVIDEND',
-      scope:      'all_stocks',
-      is_enabled: true,
-    }, { onConflict: 'user_id,alert_type', ignoreDuplicates: true });
+  await pool.execute(
+    `INSERT IGNORE INTO user_alert_preferences (user_id, alert_type, scope, is_enabled)
+     VALUES (?, 'DIVIDEND', 'all_stocks', 1)`,
+    [userId]
+  );
 }
 
 // ─── POST /api/auth/otp/send ──────────────────────────────────────────────────
@@ -60,12 +57,15 @@ router.post('/otp/send', async (req, res) => {
   const otp       = generateOTP();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  const { error: upsertErr } = await supabaseAdmin
-    .from('phone_otps')
-    .upsert({ phone, otp_code: otp, expires_at: expiresAt });
-
-  if (upsertErr) {
-    console.error('[OTP] DB error:', upsertErr);
+  try {
+    await pool.execute(
+      `INSERT INTO phone_otps (phone, otp_code, expires_at)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE otp_code = VALUES(otp_code), expires_at = VALUES(expires_at)`,
+      [phone, otp, expiresAt]
+    );
+  } catch (err) {
+    console.error('[OTP] DB error:', err.message);
     return res.status(500).json({ error: 'Failed to generate OTP' });
   }
 
@@ -88,18 +88,18 @@ router.post('/otp/verify', async (req, res) => {
     return res.status(400).json({ error: 'Phone and OTP are required' });
   }
 
-  const { data: record } = await supabaseAdmin
-    .from('phone_otps')
-    .select('*')
-    .eq('phone', phone)
-    .maybeSingle();
+  const [rows] = await pool.execute(
+    'SELECT * FROM phone_otps WHERE phone = ?',
+    [phone]
+  );
+  const record = rows[0] || null;
 
   if (!record) {
     return res.status(400).json({ error: 'OTP not found. Please request a new one.' });
   }
 
-  if (new Date() > new Date(record.expires_at + 'Z')) {
-    await supabaseAdmin.from('phone_otps').delete().eq('phone', phone);
+  if (new Date() > new Date(record.expires_at)) {
+    await pool.execute('DELETE FROM phone_otps WHERE phone = ?', [phone]);
     return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
   }
 
@@ -108,14 +108,14 @@ router.post('/otp/verify', async (req, res) => {
   }
 
   // OTP valid — delete it immediately
-  await supabaseAdmin.from('phone_otps').delete().eq('phone', phone);
+  await pool.execute('DELETE FROM phone_otps WHERE phone = ?', [phone]);
 
   // Find or create user
-  let { data: user } = await supabaseAdmin
-    .from('users')
-    .select('*')
-    .eq('phone', phone)
-    .maybeSingle();
+  const [userRows] = await pool.execute(
+    'SELECT * FROM users WHERE phone = ?',
+    [phone]
+  );
+  let user = userRows[0] || null;
 
   const sessionToken   = generateSessionToken();
   const sessionExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
@@ -123,38 +123,32 @@ router.post('/otp/verify', async (req, res) => {
 
   if (!user) {
     isNewUser = true;
+    const userId = crypto.randomUUID();
 
-    const { data: newUser, error: createErr } = await supabaseAdmin
-      .from('users')
-      .insert({
-        phone,
-        is_verified:        true,
-        session_token:      sessionToken,
-        session_expires_at: sessionExpires,
-      })
-      .select()
-      .single();
-
-    if (createErr) {
-      console.error('[Auth] Create user error:', createErr);
+    try {
+      await pool.execute(
+        `INSERT INTO users (id, phone, is_verified, session_token, session_expires_at)
+         VALUES (?, ?, 1, ?, ?)`,
+        [userId, phone, sessionToken, sessionExpires]
+      );
+    } catch (err) {
+      console.error('[Auth] Create user error:', err.message);
       return res.status(500).json({ error: 'Failed to create account' });
     }
 
-    user = newUser;
+    const [newRows] = await pool.execute('SELECT * FROM users WHERE id = ?', [userId]);
+    user = newRows[0];
     await createDefaultPreferences(user.id);
 
   } else {
-    const { error: updateErr } = await supabaseAdmin
-      .from('users')
-      .update({
-        session_token:      sessionToken,
-        session_expires_at: sessionExpires,
-        is_verified:        true,
-      })
-      .eq('id', user.id);
-
-    if (updateErr) {
-      console.error('[Auth] Session update error:', updateErr);
+    try {
+      await pool.execute(
+        `UPDATE users SET session_token = ?, session_expires_at = ?, is_verified = 1
+         WHERE id = ?`,
+        [sessionToken, sessionExpires, user.id]
+      );
+    } catch (err) {
+      console.error('[Auth] Session update error:', err.message);
       return res.status(500).json({ error: 'Login failed. Please try again.' });
     }
   }
@@ -188,21 +182,29 @@ router.post('/onboarding', async (req, res) => {
     return res.status(400).json({ error: 'Invalid phone number. Use format: +91XXXXXXXXXX' });
   }
 
-  const { data: user } = await supabaseAdmin
-    .from('users')
-    .select('id, name, phone')
-    .eq('session_token', token)
-    .gt('session_expires_at', new Date().toISOString().replace('Z', ''))
-    .maybeSingle();
+  const [rows] = await pool.execute(
+    `SELECT id, name, phone FROM users
+     WHERE session_token = ? AND session_expires_at > NOW()`,
+    [token]
+  );
+  const user = rows[0] || null;
 
   if (!user) {
     return res.status(401).json({ error: 'Invalid or expired session' });
   }
 
-  const updates = { name: name.trim() };
-  if (phone) updates.phone = phone;
+  if (phone) {
+    await pool.execute(
+      'UPDATE users SET name = ?, phone = ? WHERE id = ?',
+      [name.trim(), phone, user.id]
+    );
+  } else {
+    await pool.execute(
+      'UPDATE users SET name = ? WHERE id = ?',
+      [name.trim(), user.id]
+    );
+  }
 
-  await supabaseAdmin.from('users').update(updates).eq('id', user.id);
   await createDefaultPreferences(user.id);
 
   res.json({ success: true, name: name.trim() });
@@ -239,11 +241,11 @@ router.post('/google', async (req, res) => {
   }
 
   // Find existing user by email
-  let { data: user } = await supabaseAdmin
-    .from('users')
-    .select('*')
-    .eq('email', email)
-    .maybeSingle();
+  const [userRows] = await pool.execute(
+    'SELECT * FROM users WHERE email = ?',
+    [email]
+  );
+  let user = userRows[0] || null;
 
   const sessionToken   = generateSessionToken();
   const sessionExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -251,35 +253,37 @@ router.post('/google', async (req, res) => {
 
   if (!user) {
     isNewUser = true;
-    const { data: newUser, error: createErr } = await supabaseAdmin
-      .from('users')
-      .insert({
-        email,
-        name: name || null,
-        phone: '',
-        is_verified: true,
-        session_token: sessionToken,
-        session_expires_at: sessionExpires,
-      })
-      .select()
-      .single();
+    const userId = crypto.randomUUID();
 
-    if (createErr) {
-      console.error('[Auth] Google create user error:', createErr);
+    try {
+      await pool.execute(
+        `INSERT INTO users (id, email, name, phone, is_verified, session_token, session_expires_at)
+         VALUES (?, ?, ?, '', 1, ?, ?)`,
+        [userId, email, name || null, sessionToken, sessionExpires]
+      );
+    } catch (err) {
+      console.error('[Auth] Google create user error:', err.message);
       return res.status(500).json({ error: 'Failed to create account' });
     }
-    user = newUser;
+
+    const [newRows] = await pool.execute('SELECT * FROM users WHERE id = ?', [userId]);
+    user = newRows[0];
     await createDefaultPreferences(user.id);
   } else {
-    const updates = {
-      session_token: sessionToken,
-      session_expires_at: sessionExpires,
-      is_verified: true,
-    };
-    if (!user.name && name) updates.name = name;
-
-    await supabaseAdmin.from('users').update(updates).eq('id', user.id);
-    if (name && !user.name) user.name = name;
+    if (!user.name && name) {
+      await pool.execute(
+        `UPDATE users SET session_token = ?, session_expires_at = ?, is_verified = 1, name = ?
+         WHERE id = ?`,
+        [sessionToken, sessionExpires, name, user.id]
+      );
+      user.name = name;
+    } else {
+      await pool.execute(
+        `UPDATE users SET session_token = ?, session_expires_at = ?, is_verified = 1
+         WHERE id = ?`,
+        [sessionToken, sessionExpires, user.id]
+      );
+    }
   }
 
   res.json({
@@ -328,11 +332,11 @@ router.post('/apple', async (req, res) => {
     ? `${appleUser.name.firstName || ''} ${appleUser.name.lastName || ''}`.trim()
     : null;
 
-  let { data: user } = await supabaseAdmin
-    .from('users')
-    .select('*')
-    .eq('email', email)
-    .maybeSingle();
+  const [userRows] = await pool.execute(
+    'SELECT * FROM users WHERE email = ?',
+    [email]
+  );
+  let user = userRows[0] || null;
 
   const sessionToken   = generateSessionToken();
   const sessionExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -340,35 +344,37 @@ router.post('/apple', async (req, res) => {
 
   if (!user) {
     isNewUser = true;
-    const { data: newUser, error: createErr } = await supabaseAdmin
-      .from('users')
-      .insert({
-        email,
-        name: appleName || null,
-        phone: '',
-        is_verified: true,
-        session_token: sessionToken,
-        session_expires_at: sessionExpires,
-      })
-      .select()
-      .single();
+    const userId = crypto.randomUUID();
 
-    if (createErr) {
-      console.error('[Auth] Apple create user error:', createErr);
+    try {
+      await pool.execute(
+        `INSERT INTO users (id, email, name, phone, is_verified, session_token, session_expires_at)
+         VALUES (?, ?, ?, '', 1, ?, ?)`,
+        [userId, email, appleName || null, sessionToken, sessionExpires]
+      );
+    } catch (err) {
+      console.error('[Auth] Apple create user error:', err.message);
       return res.status(500).json({ error: 'Failed to create account' });
     }
-    user = newUser;
+
+    const [newRows] = await pool.execute('SELECT * FROM users WHERE id = ?', [userId]);
+    user = newRows[0];
     await createDefaultPreferences(user.id);
   } else {
-    const updates = {
-      session_token: sessionToken,
-      session_expires_at: sessionExpires,
-      is_verified: true,
-    };
-    if (!user.name && appleName) updates.name = appleName;
-
-    await supabaseAdmin.from('users').update(updates).eq('id', user.id);
-    if (appleName && !user.name) user.name = appleName;
+    if (!user.name && appleName) {
+      await pool.execute(
+        `UPDATE users SET session_token = ?, session_expires_at = ?, is_verified = 1, name = ?
+         WHERE id = ?`,
+        [sessionToken, sessionExpires, appleName, user.id]
+      );
+      user.name = appleName;
+    } else {
+      await pool.execute(
+        `UPDATE users SET session_token = ?, session_expires_at = ?, is_verified = 1
+         WHERE id = ?`,
+        [sessionToken, sessionExpires, user.id]
+      );
+    }
   }
 
   res.json({
@@ -394,10 +400,10 @@ router.get('/config', (req, res) => {
 router.post('/logout', async (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (token) {
-    await supabaseAdmin
-      .from('users')
-      .update({ session_token: null, session_expires_at: null })
-      .eq('session_token', token);
+    await pool.execute(
+      'UPDATE users SET session_token = NULL, session_expires_at = NULL WHERE session_token = ?',
+      [token]
+    );
   }
   res.json({ success: true });
 });

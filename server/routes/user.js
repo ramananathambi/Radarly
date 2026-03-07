@@ -1,6 +1,6 @@
 const express = require('express');
 const router  = express.Router();
-const { supabaseAdmin } = require('../lib/supabase');
+const { pool }          = require('../lib/db');
 const { requireAuth }   = require('../middleware/auth');
 
 // All routes require auth
@@ -10,22 +10,35 @@ router.use(requireAuth);
 
 // GET /api/user/stocks
 router.get('/stocks', async (req, res) => {
-  const { data, error } = await supabaseAdmin
-    .from('user_stocks')
-    .select(`
-      symbol,
-      added_at,
-      stocks_master ( company_name, exchange, sector, last_price, price_updated_at )
-    `)
-    .eq('user_id', req.user.id)
-    .order('added_at', { ascending: false });
+  try {
+    const [rows] = await pool.execute(
+      `SELECT us.symbol, us.added_at,
+              sm.company_name, sm.exchange, sm.sector, sm.last_price, sm.price_updated_at
+       FROM user_stocks us
+       JOIN stocks_master sm ON us.symbol = sm.symbol
+       WHERE us.user_id = ?
+       ORDER BY us.added_at DESC`,
+      [req.user.id]
+    );
 
-  if (error) {
-    console.error('[User] Get stocks error:', error);
+    // Restructure to match Supabase nested format for API compatibility
+    const stocks = rows.map(r => ({
+      symbol:   r.symbol,
+      added_at: r.added_at,
+      stocks_master: {
+        company_name:     r.company_name,
+        exchange:         r.exchange,
+        sector:           r.sector,
+        last_price:       r.last_price,
+        price_updated_at: r.price_updated_at,
+      },
+    }));
+
+    res.json({ stocks });
+  } catch (err) {
+    console.error('[User] Get stocks error:', err.message);
     return res.status(500).json({ error: 'Failed to fetch your stocks' });
   }
-
-  res.json({ stocks: data });
 });
 
 // POST /api/user/stocks — { symbol }
@@ -39,22 +52,22 @@ router.post('/stocks', async (req, res) => {
   const sym = symbol.trim().toUpperCase();
 
   // Verify stock exists
-  const { data: stock } = await supabaseAdmin
-    .from('stocks_master')
-    .select('symbol')
-    .eq('symbol', sym)
-    .maybeSingle();
+  const [stockRows] = await pool.execute(
+    'SELECT symbol FROM stocks_master WHERE symbol = ?',
+    [sym]
+  );
 
-  if (!stock) {
+  if (stockRows.length === 0) {
     return res.status(404).json({ error: `Stock ${sym} not found` });
   }
 
-  const { error } = await supabaseAdmin
-    .from('user_stocks')
-    .upsert({ user_id: req.user.id, symbol: sym }, { onConflict: 'user_id,symbol', ignoreDuplicates: true });
-
-  if (error) {
-    console.error('[User] Add stock error:', error);
+  try {
+    await pool.execute(
+      `INSERT IGNORE INTO user_stocks (user_id, symbol) VALUES (?, ?)`,
+      [req.user.id, sym]
+    );
+  } catch (err) {
+    console.error('[User] Add stock error:', err.message);
     return res.status(500).json({ error: 'Failed to add stock' });
   }
 
@@ -65,14 +78,13 @@ router.post('/stocks', async (req, res) => {
 router.delete('/stocks/:symbol', async (req, res) => {
   const sym = req.params.symbol.toUpperCase();
 
-  const { error } = await supabaseAdmin
-    .from('user_stocks')
-    .delete()
-    .eq('user_id', req.user.id)
-    .eq('symbol', sym);
-
-  if (error) {
-    console.error('[User] Remove stock error:', error);
+  try {
+    await pool.execute(
+      'DELETE FROM user_stocks WHERE user_id = ? AND symbol = ?',
+      [req.user.id, sym]
+    );
+  } catch (err) {
+    console.error('[User] Remove stock error:', err.message);
     return res.status(500).json({ error: 'Failed to remove stock' });
   }
 
@@ -83,23 +95,34 @@ router.delete('/stocks/:symbol', async (req, res) => {
 
 // GET /api/user/preferences
 router.get('/preferences', async (req, res) => {
-  const { data, error } = await supabaseAdmin
-    .from('user_alert_preferences')
-    .select(`
-      alert_type,
-      scope,
-      is_enabled,
-      updated_at,
-      alert_types ( name, description, is_active )
-    `)
-    .eq('user_id', req.user.id);
+  try {
+    const [rows] = await pool.execute(
+      `SELECT uap.alert_type, uap.scope, uap.is_enabled, uap.updated_at,
+              at.name, at.description, at.is_active
+       FROM user_alert_preferences uap
+       JOIN alert_types at ON uap.alert_type = at.code
+       WHERE uap.user_id = ?`,
+      [req.user.id]
+    );
 
-  if (error) {
-    console.error('[User] Get prefs error:', error);
+    // Restructure to match Supabase nested format
+    const preferences = rows.map(r => ({
+      alert_type: r.alert_type,
+      scope:      r.scope,
+      is_enabled: !!r.is_enabled,
+      updated_at: r.updated_at,
+      alert_types: {
+        name:        r.name,
+        description: r.description,
+        is_active:   !!r.is_active,
+      },
+    }));
+
+    res.json({ preferences });
+  } catch (err) {
+    console.error('[User] Get prefs error:', err.message);
     return res.status(500).json({ error: 'Failed to fetch preferences' });
   }
-
-  res.json({ preferences: data });
 });
 
 // PUT /api/user/preferences — { alert_type, scope, is_enabled }
@@ -116,29 +139,38 @@ router.put('/preferences', async (req, res) => {
   }
 
   // Verify alert_type is valid and active
-  const { data: alertType } = await supabaseAdmin
-    .from('alert_types')
-    .select('code')
-    .eq('code', alert_type)
-    .eq('is_active', true)
-    .maybeSingle();
+  const [atRows] = await pool.execute(
+    'SELECT code FROM alert_types WHERE code = ? AND is_active = 1',
+    [alert_type]
+  );
 
-  if (!alertType) {
+  if (atRows.length === 0) {
     return res.status(400).json({ error: `Alert type ${alert_type} is not available` });
   }
 
-  const updates = { updated_at: new Date().toISOString() };
-  if (scope      !== undefined) updates.scope      = scope;
-  if (is_enabled !== undefined) updates.is_enabled = is_enabled;
+  // Build dynamic update
+  const setClauses = ['updated_at = NOW()'];
+  const params     = [];
 
-  const { error } = await supabaseAdmin
-    .from('user_alert_preferences')
-    .update(updates)
-    .eq('user_id', req.user.id)
-    .eq('alert_type', alert_type);
+  if (scope !== undefined) {
+    setClauses.push('scope = ?');
+    params.push(scope);
+  }
+  if (is_enabled !== undefined) {
+    setClauses.push('is_enabled = ?');
+    params.push(is_enabled ? 1 : 0);
+  }
 
-  if (error) {
-    console.error('[User] Update prefs error:', error);
+  params.push(req.user.id, alert_type);
+
+  try {
+    await pool.execute(
+      `UPDATE user_alert_preferences SET ${setClauses.join(', ')}
+       WHERE user_id = ? AND alert_type = ?`,
+      params
+    );
+  } catch (err) {
+    console.error('[User] Update prefs error:', err.message);
     return res.status(500).json({ error: 'Failed to update preference' });
   }
 

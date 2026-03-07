@@ -1,7 +1,7 @@
 const express        = require('express');
 const router         = express.Router();
 const { requireAdmin }  = require('../middleware/adminAuth');
-const { supabaseAdmin } = require('../lib/supabase');
+const { pool }          = require('../lib/db');
 const { runDataFetch }  = require('../jobs/scheduler');
 const { runAlertEngine } = require('../jobs/alertEngine');
 
@@ -9,87 +9,123 @@ const { runAlertEngine } = require('../jobs/alertEngine');
 router.get('/stats', requireAdmin, async (req, res) => {
   const today = new Date().toISOString().split('T')[0];
 
-  const [users, alertsToday, alertsTotal, actions, stocks] = await Promise.all([
-    supabaseAdmin.from('users').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('alert_log').select('id', { count: 'exact', head: true }).gte('sent_at', today),
-    supabaseAdmin.from('alert_log').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('corporate_actions').select('id', { count: 'exact', head: true }).gte('last_fetched', today),
-    supabaseAdmin.from('stocks_master').select('symbol', { count: 'exact', head: true }),
-  ]);
+  try {
+    const [
+      [usersRow],
+      [alertsTodayRow],
+      [alertsTotalRow],
+      [actionsRow],
+      [stocksRow],
+    ] = await Promise.all([
+      pool.execute('SELECT COUNT(*) AS cnt FROM users'),
+      pool.execute('SELECT COUNT(*) AS cnt FROM alert_log WHERE sent_at >= ?', [today]),
+      pool.execute('SELECT COUNT(*) AS cnt FROM alert_log'),
+      pool.execute('SELECT COUNT(*) AS cnt FROM corporate_actions WHERE last_fetched >= ?', [today]),
+      pool.execute('SELECT COUNT(*) AS cnt FROM stocks_master'),
+    ]);
 
-  res.json({
-    total_users:           users.count       || 0,
-    alerts_sent_today:     alertsToday.count || 0,
-    alerts_sent_total:     alertsTotal.count || 0,
-    actions_fetched_today: actions.count     || 0,
-    total_stocks:          stocks.count      || 0,
-  });
+    res.json({
+      total_users:           usersRow[0].cnt       || 0,
+      alerts_sent_today:     alertsTodayRow[0].cnt || 0,
+      alerts_sent_total:     alertsTotalRow[0].cnt || 0,
+      actions_fetched_today: actionsRow[0].cnt     || 0,
+      total_stocks:          stocksRow[0].cnt      || 0,
+    });
+  } catch (err) {
+    console.error('[Admin] Stats error:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch stats' });
+  }
 });
 
 // GET /api/admin/users — paginated user list
 router.get('/users', requireAdmin, async (req, res) => {
   const page  = parseInt(req.query.page) || 1;
   const limit = 25;
-  const from  = (page - 1) * limit;
-  const to    = from + limit - 1;
+  const offset = (page - 1) * limit;
 
-  const { data, error, count } = await supabaseAdmin
-    .from('users')
-    .select('id, name, phone, is_verified, created_at', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(from, to);
+  try {
+    const [countRows] = await pool.execute('SELECT COUNT(*) AS total FROM users');
+    const total = countRows[0].total;
 
-  if (error) {
-    console.error('[Admin] Users list error:', error);
+    const [rows] = await pool.execute(
+      `SELECT id, name, phone, is_verified, created_at
+       FROM users
+       ORDER BY created_at DESC
+       LIMIT ${limit} OFFSET ${offset}`
+    );
+
+    // Cast is_verified
+    rows.forEach(r => { r.is_verified = !!r.is_verified; });
+
+    res.json({ users: rows, total, page, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error('[Admin] Users list error:', err.message);
     return res.status(500).json({ error: 'Failed to fetch users' });
   }
-
-  res.json({ users: data, total: count, page, totalPages: Math.ceil(count / limit) });
 });
 
 // GET /api/admin/alerts — recent alert log
 router.get('/alerts', requireAdmin, async (req, res) => {
   const page  = parseInt(req.query.page) || 1;
   const limit = 25;
-  const from  = (page - 1) * limit;
-  const to    = from + limit - 1;
+  const offset = (page - 1) * limit;
 
-  const { data, error, count } = await supabaseAdmin
-    .from('alert_log')
-    .select(`
-      id, symbol, alert_type, event_date, status, sent_at,
-      users ( name, phone )
-    `, { count: 'exact' })
-    .order('sent_at', { ascending: false })
-    .range(from, to);
+  try {
+    const [countRows] = await pool.execute('SELECT COUNT(*) AS total FROM alert_log');
+    const total = countRows[0].total;
 
-  if (error) {
-    console.error('[Admin] Alert log error:', error);
+    const [rows] = await pool.execute(
+      `SELECT al.user_id, al.symbol, al.alert_type, al.event_date, al.status, al.sent_at,
+              u.name, u.phone
+       FROM alert_log al
+       JOIN users u ON al.user_id = u.id
+       ORDER BY al.sent_at DESC
+       LIMIT ${limit} OFFSET ${offset}`
+    );
+
+    // Restructure to match Supabase nested format
+    const alerts = rows.map(r => ({
+      user_id:    r.user_id,
+      symbol:     r.symbol,
+      alert_type: r.alert_type,
+      event_date: r.event_date,
+      status:     r.status,
+      sent_at:    r.sent_at,
+      users: {
+        name:  r.name,
+        phone: r.phone,
+      },
+    }));
+
+    res.json({ alerts, total, page, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error('[Admin] Alert log error:', err.message);
     return res.status(500).json({ error: 'Failed to fetch alert log' });
   }
-
-  res.json({ alerts: data, total: count, page, totalPages: Math.ceil(count / limit) });
 });
 
 // GET /api/admin/actions — recent corporate actions
 router.get('/actions', requireAdmin, async (req, res) => {
   const page  = parseInt(req.query.page) || 1;
   const limit = 25;
-  const from  = (page - 1) * limit;
-  const to    = from + limit - 1;
+  const offset = (page - 1) * limit;
 
-  const { data, error, count } = await supabaseAdmin
-    .from('corporate_actions')
-    .select('id, symbol, action_type, ex_date, record_date, details, last_fetched', { count: 'exact' })
-    .order('ex_date', { ascending: false })
-    .range(from, to);
+  try {
+    const [countRows] = await pool.execute('SELECT COUNT(*) AS total FROM corporate_actions');
+    const total = countRows[0].total;
 
-  if (error) {
-    console.error('[Admin] Actions list error:', error);
+    const [rows] = await pool.execute(
+      `SELECT symbol, action_type, ex_date, record_date, details, last_fetched
+       FROM corporate_actions
+       ORDER BY ex_date DESC
+       LIMIT ${limit} OFFSET ${offset}`
+    );
+
+    res.json({ actions: rows, total, page, totalPages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error('[Admin] Actions list error:', err.message);
     return res.status(500).json({ error: 'Failed to fetch corporate actions' });
   }
-
-  res.json({ actions: data, total: count, page, totalPages: Math.ceil(count / limit) });
 });
 
 // POST /api/admin/fetch — trigger manual data fetch

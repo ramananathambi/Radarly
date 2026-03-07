@@ -3,8 +3,8 @@
  * Fetches corporate actions from NSE API and upserts into corporate_actions.
  * NSE requires a fresh cookie from the homepage before hitting the data API.
  */
-const axios          = require('axios');
-const { supabaseAdmin } = require('../lib/supabase');
+const axios  = require('axios');
+const { pool } = require('../lib/db');
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -108,38 +108,38 @@ async function fetchNSE() {
     if (!exDate) { skipped++; continue; }
 
     // Only upsert if symbol exists in stocks_master
-    const { data: stock } = await supabaseAdmin
-      .from('stocks_master')
-      .select('symbol')
-      .eq('symbol', symbol)
-      .maybeSingle();
+    const [stockRows] = await pool.execute(
+      'SELECT symbol FROM stocks_master WHERE symbol = ?',
+      [symbol]
+    );
 
-    if (!stock) { skipped++; continue; }
+    if (stockRows.length === 0) { skipped++; continue; }
 
     const purpose = r.subject || r.purpose || '';
+    const now = new Date();
 
-    const { error } = await supabaseAdmin
-      .from('corporate_actions')
-      .upsert({
-        symbol,
-        action_type:   'DIVIDEND',
-        ex_date:       exDate,
-        record_date:   parseNSEDate(r.recDate),
-        details: {
-          amount:      extractAmount(purpose),
-          raw_purpose: purpose,
-          face_value:  r.faceVal || null,
-          series:      r.series  || null,
-          source:      'NSE',
-        },
-        announced_at:  new Date().toISOString(),
-        last_fetched:  new Date().toISOString(),
-      }, { onConflict: 'symbol,action_type,ex_date' });
+    const details = JSON.stringify({
+      amount:      extractAmount(purpose),
+      raw_purpose: purpose,
+      face_value:  r.faceVal || null,
+      series:      r.series  || null,
+      source:      'NSE',
+    });
 
-    if (error) {
-      console.error(`[NSE] Upsert error for ${symbol}:`, error.message);
-    } else {
+    try {
+      await pool.execute(
+        `INSERT INTO corporate_actions (symbol, action_type, ex_date, record_date, details, announced_at, last_fetched)
+         VALUES (?, 'DIVIDEND', ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           record_date  = VALUES(record_date),
+           details      = VALUES(details),
+           announced_at = VALUES(announced_at),
+           last_fetched = VALUES(last_fetched)`,
+        [symbol, exDate, parseNSEDate(r.recDate), details, now, now]
+      );
       upserted++;
+    } catch (err) {
+      console.error(`[NSE] Upsert error for ${symbol}:`, err.message);
     }
   }
 

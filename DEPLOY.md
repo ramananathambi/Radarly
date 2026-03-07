@@ -1,10 +1,10 @@
 # Radarly — Deployment Guide (Hostinger)
 
 ## Prerequisites
-- Hostinger Business hosting plan (includes Node.js support)
+- Hostinger Business hosting plan (includes Node.js + MySQL)
 - GitHub account (Hostinger deploys from Git)
 - Twilio account with WhatsApp sandbox or approved number
-- Supabase project (already set up)
+- MySQL database created in Hostinger hPanel
 
 ## Step 1: Push to GitHub
 
@@ -33,14 +33,28 @@ git push -u origin main
 3. Set branch: `main`
 4. Deploy
 
-## Step 4: Set Environment Variables
+## Step 4: Set Up MySQL Database
+
+1. In hPanel, go to **Databases** > **MySQL Databases**
+2. Create a new database and user (or use existing)
+3. Note down: host, user, password, database name
+4. Run the migration script to create tables:
+   - Open **phpMyAdmin** from hPanel
+   - Select your database
+   - Go to **SQL** tab
+   - Paste the contents of `scripts/migration.sql`
+   - Click **Go**
+
+## Step 5: Set Environment Variables
 
 In Hostinger hPanel > Node.js > Environment Variables, add:
 
 ```
-SUPABASE_URL=https://tzksxheopspuwdtmwjcx.supabase.co
-SUPABASE_ANON_KEY=<your_anon_key>
-SUPABASE_SERVICE_KEY=<your_service_role_key>
+MYSQL_HOST=localhost
+MYSQL_USER=u521668548_Ramana
+MYSQL_PASSWORD=<your_mysql_password>
+MYSQL_DATABASE=u521668548_Radarly
+MYSQL_PORT=3306
 TWILIO_ACCOUNT_SID=<your_twilio_sid>
 TWILIO_AUTH_TOKEN=<your_twilio_auth_token>
 TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
@@ -48,20 +62,20 @@ TWILIO_SMS_FROM=+1XXXXXXXXXX
 ADMIN_PASSWORD=<strong_random_password>
 PORT=3000
 APP_NAME=Radarly
-APP_URL=https://yourdomain.com
+APP_URL=https://radarly.in
 DEV_MODE=false
 ```
 
 **Important**: Set `DEV_MODE=false` in production to enable real Twilio messaging.
 
-## Step 5: Install Dependencies
+## Step 6: Install Dependencies
 
 SSH into Hostinger or use the built-in terminal:
 ```bash
 npm install --production
 ```
 
-## Step 6: Seed Stocks (One-time)
+## Step 7: Seed Stocks (One-time)
 
 ```bash
 node scripts/seedStocks.js
@@ -72,19 +86,19 @@ This will try NSE + BSE APIs first (works from Indian servers). If they fail, us
 node scripts/seedStocks.js --static
 ```
 
-## Step 7: Set Up Twilio Webhook
+## Step 8: Set Up Twilio Webhook
 
 1. In Twilio Console, go to your WhatsApp Sandbox settings
 2. Set the **When a message comes in** webhook to:
    ```
-   https://yourdomain.com/api/webhooks/twilio
+   https://radarly.in/api/webhooks/twilio
    ```
    Method: POST
 
-## Step 8: Verify
+## Step 9: Verify
 
-1. Visit `https://yourdomain.com` — landing page should load
-2. Visit `https://yourdomain.com/admin.html` — log in with your admin password
+1. Visit `https://radarly.in` — landing page should load
+2. Visit `https://radarly.in/admin.html` — log in with your admin password
 3. Click **Run Data Fetch** to pull NSE+BSE corporate actions
 4. Check server logs for fetch results
 
@@ -100,3 +114,4 @@ The app runs these cron jobs automatically (IST timezone):
 - **Port in use**: Hostinger manages port assignment. The app uses `process.env.PORT`.
 - **Twilio not sending**: Ensure `DEV_MODE=false` and Twilio credentials are correct.
 - **OTP not arriving**: Check Twilio SMS logs in the Twilio Console.
+- **MySQL connection refused**: Check that `MYSQL_HOST` is correct (usually `localhost` on Hostinger).

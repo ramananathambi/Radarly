@@ -1,6 +1,6 @@
 const express = require('express');
 const router  = express.Router();
-const { supabaseAdmin } = require('../lib/supabase');
+const { pool } = require('../lib/db');
 
 const PAGE_SIZE = 50;
 
@@ -11,30 +11,50 @@ router.get('/', async (req, res) => {
   const sector   = req.query.sector;
   const offset   = (page - 1) * PAGE_SIZE;
 
-  let query = supabaseAdmin
-    .from('stocks_master')
-    .select('symbol, company_name, exchange, sector, industry, last_price, price_updated_at', { count: 'exact' })
-    .eq('is_active', true)
-    .order('symbol')
-    .range(offset, offset + PAGE_SIZE - 1);
+  // Build WHERE clause dynamically
+  const conditions = ['is_active = 1'];
+  const params     = [];
 
-  if (exchange) query = query.eq('exchange', exchange);
-  if (sector)   query = query.eq('sector', sector);
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    console.error('[Stocks] List error:', error);
-    return res.status(500).json({ error: 'Failed to fetch stocks' });
+  if (exchange) {
+    conditions.push('exchange = ?');
+    params.push(exchange);
+  }
+  if (sector) {
+    conditions.push('sector = ?');
+    params.push(sector);
   }
 
-  res.json({
-    stocks:    data,
-    total:     count,
-    page,
-    pageSize:  PAGE_SIZE,
-    totalPages: Math.ceil(count / PAGE_SIZE),
-  });
+  const whereClause = conditions.join(' AND ');
+
+  try {
+    // Get total count
+    const [countRows] = await pool.execute(
+      `SELECT COUNT(*) AS total FROM stocks_master WHERE ${whereClause}`,
+      params
+    );
+    const total = countRows[0].total;
+
+    // Get paginated data
+    const [rows] = await pool.execute(
+      `SELECT symbol, company_name, exchange, sector, industry, last_price, price_updated_at
+       FROM stocks_master
+       WHERE ${whereClause}
+       ORDER BY symbol
+       LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
+      params
+    );
+
+    res.json({
+      stocks:    rows,
+      total,
+      page,
+      pageSize:  PAGE_SIZE,
+      totalPages: Math.ceil(total / PAGE_SIZE),
+    });
+  } catch (err) {
+    console.error('[Stocks] List error:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch stocks' });
+  }
 });
 
 // GET /api/stocks/search?q=reliance
@@ -45,35 +65,39 @@ router.get('/search', async (req, res) => {
     return res.status(400).json({ error: 'Search query required' });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('stocks_master')
-    .select('symbol, company_name, exchange, sector, last_price, price_updated_at')
-    .eq('is_active', true)
-    .or(`symbol.ilike.%${q}%,company_name.ilike.%${q}%`)
-    .order('symbol')
-    .limit(30);
+  try {
+    const searchTerm = `%${q}%`;
+    const [rows] = await pool.execute(
+      `SELECT symbol, company_name, exchange, sector, last_price, price_updated_at
+       FROM stocks_master
+       WHERE is_active = 1 AND (symbol LIKE ? OR company_name LIKE ?)
+       ORDER BY symbol
+       LIMIT 30`,
+      [searchTerm, searchTerm]
+    );
 
-  if (error) {
-    console.error('[Stocks] Search error:', error);
+    res.json({ stocks: rows });
+  } catch (err) {
+    console.error('[Stocks] Search error:', err.message);
     return res.status(500).json({ error: 'Search failed' });
   }
-
-  res.json({ stocks: data });
 });
 
 // GET /api/stocks/sectors — distinct sector list for filter dropdown
 router.get('/sectors', async (req, res) => {
-  const { data, error } = await supabaseAdmin
-    .from('stocks_master')
-    .select('sector')
-    .eq('is_active', true)
-    .not('sector', 'is', null)
-    .order('sector');
+  try {
+    const [rows] = await pool.execute(
+      `SELECT DISTINCT sector FROM stocks_master
+       WHERE is_active = 1 AND sector IS NOT NULL
+       ORDER BY sector`
+    );
 
-  if (error) return res.status(500).json({ error: 'Failed to fetch sectors' });
-
-  const sectors = [...new Set(data.map(r => r.sector))].filter(Boolean);
-  res.json({ sectors });
+    const sectors = rows.map(r => r.sector).filter(Boolean);
+    res.json({ sectors });
+  } catch (err) {
+    console.error('[Stocks] Sectors error:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch sectors' });
+  }
 });
 
 module.exports = router;
