@@ -39,7 +39,7 @@ a:hover { text-decoration: underline; }
   height: 60px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -48,7 +48,7 @@ a:hover { text-decoration: underline; }
 .nav-brand { display: flex; align-items: center; gap: 8px; color: #ffffff; font-weight: 800; font-size: 22px; letter-spacing: -0.02em; }
 .nav-brand:hover { text-decoration: none; color: #ffffff; }
 .nav-logo { height: 40px; width: auto; display: block; }
-.nav-links { display: flex; gap: 24px; }
+.nav-links { display: flex; gap: 24px; position: absolute; right: 24px; }
 .nav-links a { color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 500; transition: color 0.2s; }
 .nav-links a:hover { color: #ffffff; text-decoration: none; }
 .nav-links a.active { color: #ffffff; }
