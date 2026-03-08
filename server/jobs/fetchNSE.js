@@ -1,10 +1,19 @@
 /**
  * fetchNSE.js
  * Fetches corporate actions from NSE API and upserts into corporate_actions.
- * NSE requires a fresh cookie from the homepage before hitting the data API.
- * Uses full browser-like headers to bypass Akamai WAF/bot detection.
+ *
+ * Strategy:
+ *   1. Try curl (different TLS/JA3 fingerprint from Node.js — bypasses Akamai)
+ *   2. Fall back to axios if curl fails
+ *
+ * NSE blocks hosting/datacenter IPs via TLS fingerprinting (JA3 hash).
+ * curl uses OpenSSL while Node.js uses its own TLS stack → different fingerprint.
  */
-const axios  = require('axios');
+const { execSync } = require('child_process');
+const fs    = require('fs');
+const path  = require('path');
+const os    = require('os');
+const axios = require('axios');
 const { pool } = require('../lib/db');
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -30,77 +39,126 @@ function extractAmount(purpose) {
   return m ? parseFloat(m[1]) : null;
 }
 
-// ─── Browser-like headers ────────────────────────────────────────────────────
+// ─── Browser-like constants ──────────────────────────────────────────────────
 
-const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
-const PAGE_HEADERS = {
-  'User-Agent':                 BROWSER_UA,
-  'Accept':                     'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-  'Accept-Language':            'en-US,en;q=0.9',
-  'Accept-Encoding':            'gzip, deflate, br',
-  'Connection':                 'keep-alive',
-  'Cache-Control':              'max-age=0',
-  'Sec-Ch-Ua':                  '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-  'Sec-Ch-Ua-Mobile':           '?0',
-  'Sec-Ch-Ua-Platform':         '"Windows"',
-  'Sec-Fetch-Dest':             'document',
-  'Sec-Fetch-Mode':             'navigate',
-  'Sec-Fetch-Site':             'none',
-  'Sec-Fetch-User':             '?1',
-  'Upgrade-Insecure-Requests':  '1',
-};
+// ─── Strategy 1: curl-based fetch (different TLS fingerprint) ────────────────
 
-const API_HEADERS = {
-  'User-Agent':          BROWSER_UA,
-  'Accept':              'application/json, text/javascript, */*; q=0.01',
-  'Accept-Language':     'en-US,en;q=0.9',
-  'Accept-Encoding':     'gzip, deflate, br',
-  'Connection':          'keep-alive',
-  'Sec-Ch-Ua':           '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-  'Sec-Ch-Ua-Mobile':    '?0',
-  'Sec-Ch-Ua-Platform':  '"Windows"',
-  'Sec-Fetch-Dest':      'empty',
-  'Sec-Fetch-Mode':      'cors',
-  'Sec-Fetch-Site':      'same-origin',
-  'X-Requested-With':    'XMLHttpRequest',
-};
+async function fetchViaCurl(fromStr, toStr) {
+  const cookieFile = path.join(os.tmpdir(), `nse_cookies_${Date.now()}.txt`);
 
-// ─── NSE session cookie (multi-step) ─────────────────────────────────────────
+  try {
+    // Step 1: Visit homepage to get session cookies
+    console.log('[NSE/curl] Getting session cookies...');
+    execSync(
+      `curl -s -L -c "${cookieFile}" --max-time 15 --compressed ` +
+      `-H "User-Agent: ${UA}" ` +
+      `-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" ` +
+      `-H "Accept-Language: en-US,en;q=0.9" ` +
+      `-H "Accept-Encoding: gzip, deflate, br" ` +
+      `-H "Connection: keep-alive" ` +
+      `-H "Upgrade-Insecure-Requests: 1" ` +
+      `-H "Sec-Fetch-Dest: document" ` +
+      `-H "Sec-Fetch-Mode: navigate" ` +
+      `-H "Sec-Fetch-Site: none" ` +
+      `-H "Sec-Fetch-User: ?1" ` +
+      `-o /dev/null ` +
+      `"https://www.nseindia.com"`,
+      { encoding: 'utf8', timeout: 20000 }
+    );
+    console.log('[NSE/curl] Session cookies acquired');
 
-async function getNSECookies() {
-  // Step 1: Visit homepage to get initial cookies
+    // Brief human-like pause
+    await new Promise(r => setTimeout(r, 2000 + Math.random() * 1500));
+
+    // Step 2: Fetch corporate actions API
+    const apiUrl = `https://www.nseindia.com/api/corporates-pit?index=equities&from_date=${fromStr}&to_date=${toStr}`;
+
+    console.log('[NSE/curl] Fetching corporate actions API...');
+    const raw = execSync(
+      `curl -s -L -b "${cookieFile}" --max-time 30 --compressed ` +
+      `-H "User-Agent: ${UA}" ` +
+      `-H "Accept: application/json, text/javascript, */*; q=0.01" ` +
+      `-H "Accept-Language: en-US,en;q=0.9" ` +
+      `-H "Accept-Encoding: gzip, deflate, br" ` +
+      `-H "Connection: keep-alive" ` +
+      `-H "Referer: https://www.nseindia.com/companies-listing/corporate-filings-corporateActions" ` +
+      `-H "Sec-Fetch-Dest: empty" ` +
+      `-H "Sec-Fetch-Mode: cors" ` +
+      `-H "Sec-Fetch-Site: same-origin" ` +
+      `-H "X-Requested-With: XMLHttpRequest" ` +
+      `"${apiUrl}"`,
+      { encoding: 'utf8', timeout: 35000, maxBuffer: 10 * 1024 * 1024 }
+    );
+
+    const parsed = JSON.parse(raw);
+    const records = parsed?.data || parsed || [];
+
+    if (!Array.isArray(records)) {
+      console.warn('[NSE/curl] Unexpected response type:', typeof records);
+      return [];
+    }
+
+    console.log(`[NSE/curl] Got ${records.length} records`);
+    return records;
+
+  } finally {
+    // Clean up cookie file
+    try { fs.unlinkSync(cookieFile); } catch {}
+  }
+}
+
+// ─── Strategy 2: axios-based fetch (fallback) ────────────────────────────────
+
+async function fetchViaAxios(fromStr, toStr) {
+  console.log('[NSE/axios] Getting session cookies...');
+
+  const pageHeaders = {
+    'User-Agent':                UA,
+    'Accept':                    'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language':           'en-US,en;q=0.9',
+    'Accept-Encoding':           'gzip, deflate, br',
+    'Connection':                'keep-alive',
+    'Sec-Fetch-Dest':            'document',
+    'Sec-Fetch-Mode':            'navigate',
+    'Sec-Fetch-Site':            'none',
+    'Sec-Fetch-User':            '?1',
+    'Upgrade-Insecure-Requests': '1',
+  };
+
   const res1 = await axios.get('https://www.nseindia.com', {
-    headers: PAGE_HEADERS,
+    headers: pageHeaders,
     timeout: 15000,
     maxRedirects: 5,
   });
 
-  const cookies1 = (res1.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
-  console.log('[NSE] Homepage cookies acquired');
+  const cookies = (res1.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+  console.log('[NSE/axios] Session cookies acquired');
 
-  // Brief human-like pause
-  await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
+  await new Promise(r => setTimeout(r, 2500));
 
-  // Step 2: Visit corporate actions page to warm up session
-  try {
-    await axios.get('https://www.nseindia.com/companies-listing/corporate-filings-corporateActions', {
-      headers: {
-        ...PAGE_HEADERS,
-        'Cookie':  cookies1,
-        'Referer': 'https://www.nseindia.com/',
-        'Sec-Fetch-Site': 'same-origin',
-      },
-      timeout: 15000,
-      maxRedirects: 5,
-    });
-    console.log('[NSE] Corporate actions page visited');
-  } catch (err) {
-    // Non-fatal — some setups skip this
-    console.warn('[NSE] Corporate actions page visit failed (non-fatal):', err.message);
-  }
+  const apiUrl = `https://www.nseindia.com/api/corporates-pit?index=equities&from_date=${fromStr}&to_date=${toStr}`;
 
-  return cookies1;
+  const res2 = await axios.get(apiUrl, {
+    headers: {
+      'User-Agent':         UA,
+      'Accept':             'application/json, text/javascript, */*; q=0.01',
+      'Accept-Language':    'en-US,en;q=0.9',
+      'Accept-Encoding':    'gzip, deflate, br',
+      'Connection':         'keep-alive',
+      'Referer':            'https://www.nseindia.com/companies-listing/corporate-filings-corporateActions',
+      'Cookie':             cookies,
+      'Sec-Fetch-Dest':     'empty',
+      'Sec-Fetch-Mode':     'cors',
+      'Sec-Fetch-Site':     'same-origin',
+      'X-Requested-With':   'XMLHttpRequest',
+    },
+    timeout: 30000,
+  });
+
+  const records = res2.data?.data || res2.data || [];
+  return Array.isArray(records) ? records : [];
 }
 
 // ─── Main fetch ───────────────────────────────────────────────────────────────
@@ -115,44 +173,25 @@ async function fetchNSE() {
   const fromStr = formatNSEDate(today);
   const toStr   = formatNSEDate(toDate);
 
-  // Step 1: get fresh session cookie (multi-step)
-  let cookies;
+  // Try curl first (different TLS fingerprint), fall back to axios
+  let records = [];
+
   try {
-    cookies = await getNSECookies();
+    records = await fetchViaCurl(fromStr, toStr);
   } catch (err) {
-    console.error('[NSE] Failed to get session cookie:', err.message);
-    throw err;
-  }
-
-  // Human-like pause before API call
-  await new Promise(r => setTimeout(r, 2000 + Math.random() * 1500));
-
-  // Step 2: fetch corporate actions
-  const url = `https://www.nseindia.com/api/corporates-pit?index=equities&from_date=${fromStr}&to_date=${toStr}`;
-
-  let records;
-  try {
-    const res = await axios.get(url, {
-      headers: {
-        ...API_HEADERS,
-        'Cookie':  cookies,
-        'Referer': 'https://www.nseindia.com/companies-listing/corporate-filings-corporateActions',
-      },
-      timeout: 30000,
-    });
-    records = res.data?.data || res.data || [];
-    if (!Array.isArray(records)) {
-      console.warn('[NSE] Unexpected response shape:', typeof records);
-      records = [];
+    console.warn('[NSE] curl strategy failed:', err.message);
+    console.log('[NSE] Falling back to axios...');
+    try {
+      records = await fetchViaAxios(fromStr, toStr);
+    } catch (err2) {
+      console.error('[NSE] axios strategy also failed:', err2.response?.status || err2.message);
+      throw err2;
     }
-  } catch (err) {
-    console.error('[NSE] API request failed:', err.response?.status, err.message);
-    throw err;
   }
 
   console.log(`[NSE] Received ${records.length} total records`);
 
-  // Step 3: filter dividends
+  // Filter dividends
   const dividends = records.filter(r => {
     const text = ((r.subject || '') + ' ' + (r.purpose || '')).toUpperCase();
     return text.includes('DIVIDEND');
@@ -160,7 +199,7 @@ async function fetchNSE() {
 
   console.log(`[NSE] ${dividends.length} dividend records to process`);
 
-  // Step 4: upsert into corporate_actions
+  // Upsert into corporate_actions
   let upserted = 0, skipped = 0;
 
   for (const r of dividends) {
