@@ -74,10 +74,19 @@ async function fetchBSERecords(fromStr, toStr) {
   for (const ep of endpoints) {
     try {
       console.log(`[BSE] Trying ${ep.name}...`);
+      console.log(`[BSE] URL: ${ep.url}`);
       const res = await axios.get(ep.url, {
         headers: BSE_HEADERS,
         timeout: 30000,
       });
+
+      // Debug: log raw response shape
+      const rawStr = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+      console.log(`[BSE] ${ep.name} raw response (first 500 chars):`, rawStr.substring(0, 500));
+
+      if (res.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
+        console.log(`[BSE] ${ep.name} response keys:`, Object.keys(res.data));
+      }
 
       let records;
       if (ep.parser === 'table') {

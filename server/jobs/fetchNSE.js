@@ -92,11 +92,32 @@ async function fetchViaCurl(fromStr, toStr) {
       { encoding: 'utf8', timeout: 35000, maxBuffer: 10 * 1024 * 1024 }
     );
 
-    const parsed = JSON.parse(raw);
+    // Debug: log raw response shape
+    console.log('[NSE/curl] Raw response (first 500 chars):', raw.substring(0, 500));
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (parseErr) {
+      console.error('[NSE/curl] JSON parse failed — response is not JSON (likely HTML/captcha)');
+      console.log('[NSE/curl] Response starts with:', raw.substring(0, 200));
+      throw new Error('NSE returned non-JSON response');
+    }
+
+    // Debug: log response keys
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      console.log('[NSE/curl] Response keys:', Object.keys(parsed));
+      // Log the length of each array-valued key
+      for (const [k, v] of Object.entries(parsed)) {
+        if (Array.isArray(v)) console.log(`[NSE/curl]   ${k}: ${v.length} items`);
+        else console.log(`[NSE/curl]   ${k}: ${typeof v}`);
+      }
+    }
+
     const records = parsed?.data || parsed || [];
 
     if (!Array.isArray(records)) {
-      console.warn('[NSE/curl] Unexpected response type:', typeof records);
+      console.warn('[NSE/curl] Unexpected response type:', typeof records, JSON.stringify(records).substring(0, 300));
       return [];
     }
 
