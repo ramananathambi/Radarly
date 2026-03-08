@@ -24,13 +24,33 @@ function formatBSEDateDash(date) {
 
 function parseBSEDate(str) {
   if (!str) return null;
-  // BSE returns dates like "2026-01-29T00:00:00" or "29/01/2026"
+  str = String(str).trim();
+
+  // Format: "2026-01-29T00:00:00"
   if (str.includes('T')) return str.split('T')[0];
+
+  // Format: "29/01/2026"
   if (str.includes('/')) {
     const [dd, mm, yyyy] = str.split('/');
     return `${yyyy}-${mm}-${dd}`;
   }
-  return str;
+
+  // Format: "09 Mar 2026" or "09 March 2026"
+  if (/^\d{1,2}\s+[A-Za-z]+\s+\d{4}$/.test(str)) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+  }
+
+  // Format: "20260309" (YYYYMMDD compact)
+  if (/^\d{8}$/.test(str)) {
+    return `${str.slice(0, 4)}-${str.slice(4, 6)}-${str.slice(6, 8)}`;
+  }
+
+  // Fallback: try native Date parsing
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+
+  return null;
 }
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
@@ -89,10 +109,13 @@ async function fetchBSERecords(fromStr, toStr) {
       }
 
       let records;
-      if (ep.parser === 'table') {
+      // BSE sometimes returns a direct array, sometimes wrapped in {Table: [...]}
+      if (Array.isArray(res.data)) {
+        records = res.data;
+      } else if (ep.parser === 'table') {
         records = res.data?.Table || res.data?.table || [];
       } else {
-        records = Array.isArray(res.data) ? res.data : (res.data?.Table || res.data?.data || []);
+        records = res.data?.Table || res.data?.data || [];
       }
 
       if (!Array.isArray(records)) {
@@ -138,20 +161,20 @@ async function fetchBSE() {
   let upserted = 0, skipped = 0;
 
   for (const r of records) {
-    // BSE uses different field names across endpoints
+    // BSE field names vary: short_name, SHORT_NAME, ShortName etc.
     const symbol = (
-      r.SHORT_NAME || r.TRADING_SYMBOL || r.scrip_id ||
-      r.ShortName || r.TradingSymbol || r.ScripCode || ''
+      r.short_name || r.SHORT_NAME || r.ShortName ||
+      r.TRADING_SYMBOL || r.TradingSymbol || ''
     ).trim().toUpperCase();
 
     if (!symbol) { skipped++; continue; }
 
-    const exDate = parseBSEDate(
-      r.EX_DATE || r.EXDATE || r.Ex_Date || r.ExDate || r.exDate || r.ex_dt
-    );
+    // Ex_date can be "09 Mar 2026" or "2026-03-09T00:00:00" or "20260309"
+    const rawExDate = r.Ex_date || r.EX_DATE || r.ExDate || r.ex_date || r.exDate || r.ex_dt;
+    const exDate = parseBSEDate(rawExDate);
     if (!exDate) { skipped++; continue; }
 
-    const purpose = r.PURPOSE || r.REMARKS || r.Purpose || r.Remarks || r.purpose || '';
+    const purpose = r.Purpose || r.PURPOSE || r.purpose || r.REMARKS || r.Remarks || '';
     if (!purpose.toUpperCase().includes('DIVIDEND')) { skipped++; continue; }
 
     // Only upsert if symbol exists in stocks_master
@@ -160,20 +183,24 @@ async function fetchBSE() {
       [symbol]
     );
 
-    if (stockRows.length === 0) { skipped++; continue; }
+    if (stockRows.length === 0) {
+      skipped++;
+      // Log first few skipped symbols for debugging
+      if (skipped <= 5) console.log(`[BSE] Skipped ${symbol} — not in stocks_master`);
+      continue;
+    }
 
     const now = new Date();
 
     const details = JSON.stringify({
       amount:      extractAmount(purpose),
       raw_purpose: purpose,
-      scrip_code:  r.SCRIP_CD || r.ScripCode || r.scrip_code || null,
+      scrip_code:  r.scrip_code || r.SCRIP_CD || r.ScripCode || null,
       source:      'BSE',
     });
 
-    const recordDate = parseBSEDate(
-      r.RD_DATE || r.RECORD_DATE || r.Record_Date || r.RecordDate || r.record_dt
-    );
+    const rawRecDate = r.RD_Date || r.RD_DATE || r.Record_Date || r.RecordDate || r.record_dt;
+    const recordDate = parseBSEDate(rawRecDate);
 
     try {
       await pool.execute(

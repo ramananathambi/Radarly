@@ -73,7 +73,7 @@ async function fetchViaCurl(fromStr, toStr) {
     await new Promise(r => setTimeout(r, 2000 + Math.random() * 1500));
 
     // Step 2: Fetch corporate actions API
-    const apiUrl = `https://www.nseindia.com/api/corporates-pit?index=equities&from_date=${fromStr}&to_date=${toStr}`;
+    const apiUrl = `https://www.nseindia.com/api/corporates-corporateActions?index=equities&from_date=${fromStr}&to_date=${toStr}`;
 
     console.log('[NSE/curl] Fetching corporate actions API...');
     const raw = execSync(
@@ -159,7 +159,7 @@ async function fetchViaAxios(fromStr, toStr) {
 
   await new Promise(r => setTimeout(r, 2500));
 
-  const apiUrl = `https://www.nseindia.com/api/corporates-pit?index=equities&from_date=${fromStr}&to_date=${toStr}`;
+  const apiUrl = `https://www.nseindia.com/api/corporates-corporateActions?index=equities&from_date=${fromStr}&to_date=${toStr}`;
 
   const res2 = await axios.get(apiUrl, {
     headers: {
