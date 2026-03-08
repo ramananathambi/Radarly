@@ -81,38 +81,27 @@
         </button>
       </div>
 
-      <div class="divider"><span>or sign in with email</span></div>
+      <div class="divider"><span>or</span></div>
 
-      <!-- Email + Password -->
-      <form id="email-form" style="text-align:center;">
+      <!-- Unified Email / Phone form -->
+      <form id="auth-form" style="text-align:center;">
         <div class="form-group" id="name-group" style="display:none;text-align:center;">
           <label for="reg-name">Full Name</label>
           <input type="text" id="reg-name" placeholder="Your full name" style="text-align:center;" />
         </div>
         <div class="form-group" style="text-align:center;">
-          <label for="email-input">Email</label>
-          <input type="email" id="email-input" placeholder="you@example.com" required style="text-align:center;" />
+          <label for="identity-input">Email or Phone</label>
+          <input type="text" id="identity-input" placeholder="you@example.com or +91 9876543210" required style="text-align:center;" autocomplete="username" />
         </div>
-        <div class="form-group" style="text-align:center;">
+        <div class="form-group" id="password-group" style="display:none;text-align:center;">
           <label for="password-input">Password</label>
-          <input type="password" id="password-input" placeholder="Min 8 characters" required minlength="8" style="text-align:center;" />
+          <input type="password" id="password-input" placeholder="Min 8 characters" minlength="8" style="text-align:center;" />
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;" id="email-btn">Sign In</button>
-        <div style="margin-top:12px;font-size:13px;color:var(--text-secondary);">
+        <button type="submit" class="btn btn-primary" style="width:100%;" id="submit-btn">Continue</button>
+        <div id="toggle-row" style="margin-top:12px;font-size:13px;color:var(--text-secondary);display:none;">
           <span id="toggle-mode-text">Don't have an account?</span>
           <a href="#" id="toggle-mode-link" style="color:var(--accent);font-weight:600;" onclick="toggleAuthMode(event)">Register</a>
         </div>
-      </form>
-
-      <div class="divider"><span>or use phone</span></div>
-
-      <!-- Phone OTP -->
-      <form id="phone-form">
-        <div class="form-group" style="text-align:center;">
-          <label for="phone">Phone Number</label>
-          <input type="tel" id="phone" placeholder="+91 9876543210" required style="text-align:center;" />
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;" id="send-btn">Send OTP</button>
       </form>
 
       <div style="margin-top:24px;text-align:center;color:var(--text-secondary);font-size:13px;">
@@ -211,72 +200,126 @@
       }
     }
 
-    // ─── Email + Password ─────────────────────────────────────────────
+    // ─── Unified Email / Phone Auth ────────────────────────────────────
+    let inputMode = 'unknown'; // 'email', 'phone', 'unknown'
     let isRegisterMode = false;
+
+    const identityInput = document.getElementById('identity-input');
+    const passwordGroup = document.getElementById('password-group');
+    const nameGroup     = document.getElementById('name-group');
+    const toggleRow     = document.getElementById('toggle-row');
+    const submitBtn     = document.getElementById('submit-btn');
+
+    function isPhone(val) {
+      const stripped = val.replace(/[\s\-()]/g, '');
+      return /^\+91[6-9]\d{9}$/.test(stripped) || /^[6-9]\d{9}$/.test(stripped);
+    }
+
+    function isEmail(val) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+    }
+
+    function looksLikePhone(val) {
+      const stripped = val.replace(/[\s\-()]/g, '');
+      return /^\+?\d+$/.test(stripped) && stripped.length >= 3;
+    }
+
+    identityInput.addEventListener('input', () => {
+      const val = identityInput.value.trim();
+      const prevMode = inputMode;
+
+      if (isEmail(val)) {
+        inputMode = 'email';
+      } else if (isPhone(val) || looksLikePhone(val)) {
+        inputMode = 'phone';
+      } else if (val.includes('@')) {
+        inputMode = 'email';
+      } else {
+        inputMode = 'unknown';
+      }
+
+      // Show/hide password field based on mode
+      if (inputMode === 'email') {
+        passwordGroup.style.display = 'block';
+        document.getElementById('password-input').setAttribute('required', '');
+        toggleRow.style.display = 'block';
+        submitBtn.textContent = isRegisterMode ? 'Create Account' : 'Sign In';
+      } else {
+        passwordGroup.style.display = 'none';
+        document.getElementById('password-input').removeAttribute('required');
+        toggleRow.style.display = 'none';
+        nameGroup.style.display = 'none';
+        submitBtn.textContent = inputMode === 'phone' ? 'Send OTP' : 'Continue';
+        if (prevMode === 'email' && inputMode !== 'email') {
+          isRegisterMode = false;
+        }
+      }
+    });
 
     function toggleAuthMode(e) {
       e.preventDefault();
       isRegisterMode = !isRegisterMode;
-      document.getElementById('name-group').style.display = isRegisterMode ? 'block' : 'none';
-      document.getElementById('email-btn').textContent = isRegisterMode ? 'Create Account' : 'Sign In';
+      nameGroup.style.display = isRegisterMode ? 'block' : 'none';
+      submitBtn.textContent = isRegisterMode ? 'Create Account' : 'Sign In';
       document.getElementById('toggle-mode-text').textContent = isRegisterMode ? 'Already have an account?' : "Don't have an account?";
       document.getElementById('toggle-mode-link').textContent = isRegisterMode ? 'Sign In' : 'Register';
       if (isRegisterMode) document.getElementById('reg-name').setAttribute('required', '');
       else document.getElementById('reg-name').removeAttribute('required');
     }
 
-    const emailForm = document.getElementById('email-form');
-    emailForm.addEventListener('submit', async (e) => {
+    const authForm = document.getElementById('auth-form');
+    authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const btn = document.getElementById('email-btn');
-      const email = document.getElementById('email-input').value.trim();
-      const password = document.getElementById('password-input').value;
-      const name = document.getElementById('reg-name').value.trim();
+      const btn = submitBtn;
+      let val = identityInput.value.trim();
 
-      if (isRegisterMode && !name) {
-        return showAlert('alert-box', 'Please enter your name', 'error');
-      }
+      // Determine what to do based on input
+      if (isEmail(val)) {
+        // Email + password flow
+        const password = document.getElementById('password-input').value;
+        const name = document.getElementById('reg-name').value.trim();
 
-      setLoading(btn, true);
-      try {
-        const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
-        const body = isRegisterMode ? { name, email, password } : { email, password };
-        const data = await api('POST', endpoint, body);
-        setToken(data.session_token);
-        if (data.needsOnboarding) {
-          window.location.href = '/onboarding.html';
-        } else {
-          window.location.href = '/dashboard.html';
+        if (!password || password.length < 8) {
+          return showAlert('alert-box', 'Password must be at least 8 characters', 'error');
         }
-      } catch (err) {
-        showAlert('alert-box', err.message, 'error');
-      } finally {
-        setLoading(btn, false);
-      }
-    });
+        if (isRegisterMode && !name) {
+          return showAlert('alert-box', 'Please enter your name', 'error');
+        }
 
-    // ─── Phone OTP ────────────────────────────────────────────────────
-    const form = document.getElementById('phone-form');
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('send-btn');
-      let phone = document.getElementById('phone').value.trim();
+        setLoading(btn, true);
+        try {
+          const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
+          const body = isRegisterMode ? { name, email: val, password } : { email: val, password };
+          const data = await api('POST', endpoint, body);
+          setToken(data.session_token);
+          window.location.href = data.needsOnboarding ? '/onboarding.html' : '/dashboard.html';
+        } catch (err) {
+          showAlert('alert-box', err.message, 'error');
+        } finally {
+          setLoading(btn, false);
+        }
 
-      // Auto-format: if user enters 10 digits without +91
-      if (/^[6-9]\d{9}$/.test(phone)) phone = '+91' + phone;
-      if (!/^\+91[6-9]\d{9}$/.test(phone)) {
-        return showAlert('alert-box', 'Enter a valid Indian mobile number', 'error');
-      }
+      } else if (isPhone(val)) {
+        // Phone OTP flow
+        let phone = val.replace(/[\s\-()]/g, '');
+        if (/^[6-9]\d{9}$/.test(phone)) phone = '+91' + phone;
+        if (!/^\+91[6-9]\d{9}$/.test(phone)) {
+          return showAlert('alert-box', 'Enter a valid Indian mobile number', 'error');
+        }
 
-      setLoading(btn, true);
-      try {
-        await api('POST', '/api/auth/otp/send', { phone });
-        localStorage.setItem('otp_phone', phone);
-        window.location.href = '/verify.html';
-      } catch (err) {
-        showAlert('alert-box', err.message, 'error');
-      } finally {
-        setLoading(btn, false);
+        setLoading(btn, true);
+        try {
+          await api('POST', '/api/auth/otp/send', { phone });
+          localStorage.setItem('otp_phone', phone);
+          window.location.href = '/verify.html';
+        } catch (err) {
+          showAlert('alert-box', err.message, 'error');
+        } finally {
+          setLoading(btn, false);
+        }
+
+      } else {
+        showAlert('alert-box', 'Please enter a valid email address or phone number', 'error');
       }
     });
 
