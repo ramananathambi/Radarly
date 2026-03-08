@@ -2,8 +2,9 @@ const express        = require('express');
 const router         = express.Router();
 const { requireAdmin }  = require('../middleware/adminAuth');
 const { pool }          = require('../lib/db');
-const { runDataFetch }  = require('../jobs/scheduler');
+const { runDataFetch }   = require('../jobs/scheduler');
 const { runAlertEngine } = require('../jobs/alertEngine');
+const { seedAllStocks }  = require('../jobs/seedAllStocks');
 
 // GET /api/admin/stats
 router.get('/stats', requireAdmin, async (req, res) => {
@@ -140,6 +141,15 @@ router.post('/alert', requireAdmin, async (req, res) => {
   console.log('[Admin] Manual alert run triggered');
   runAlertEngine().catch(err => console.error('[Admin] Manual alert error:', err.message));
   res.json({ success: true, message: 'Alert engine started in background' });
+});
+
+// POST /api/admin/seed-stocks — fetch all NSE+BSE stocks and upsert
+router.post('/seed-stocks', requireAdmin, async (req, res) => {
+  console.log('[Admin] Full stock seed triggered');
+  seedAllStocks()
+    .then(results => console.log('[Admin] Stock seed complete:', JSON.stringify(results)))
+    .catch(err => console.error('[Admin] Stock seed error:', err.message));
+  res.json({ success: true, message: 'Stock seed started in background — fetching all NSE + BSE stocks. Check logs for progress.' });
 });
 
 module.exports = router;

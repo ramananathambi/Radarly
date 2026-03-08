@@ -97,6 +97,7 @@
       <div class="action-bar">
         <button class="btn btn-primary" id="btn-fetch" onclick="triggerFetch()">Run Data Fetch (NSE + BSE)</button>
         <button class="btn btn-outline" id="btn-alert" onclick="triggerAlert()">Run Alert Engine</button>
+        <button class="btn btn-outline" id="btn-seed" onclick="triggerSeedStocks()">Seed All Stocks</button>
         <button class="btn btn-outline" onclick="loadAll()">Refresh</button>
       </div>
 
@@ -329,6 +330,19 @@
         showAlert('alert-box', data.message, 'success');
       } catch (err) {
         showAlert('alert-box', `Alert run failed: ${err.message}`, 'error');
+      }
+      setLoading(btn, false);
+    }
+
+    async function triggerSeedStocks() {
+      if (!confirm('This will fetch ALL stocks from NSE (~2000) and BSE (~4000) and upsert into stocks_master. Continue?')) return;
+      const btn = document.getElementById('btn-seed');
+      setLoading(btn, true);
+      try {
+        const data = await adminApi('POST', '/api/admin/seed-stocks');
+        showAlert('alert-box', data.message, 'success');
+      } catch (err) {
+        showAlert('alert-box', `Stock seed failed: ${err.message}`, 'error');
       }
       setLoading(btn, false);
     }
