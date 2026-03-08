@@ -2,6 +2,7 @@
  * fetchNSE.js
  * Fetches corporate actions from NSE API and upserts into corporate_actions.
  * NSE requires a fresh cookie from the homepage before hitting the data API.
+ * Uses full browser-like headers to bypass Akamai WAF/bot detection.
  */
 const axios  = require('axios');
 const { pool } = require('../lib/db');
@@ -29,17 +30,77 @@ function extractAmount(purpose) {
   return m ? parseFloat(m[1]) : null;
 }
 
-// ─── NSE session cookie ───────────────────────────────────────────────────────
+// ─── Browser-like headers ────────────────────────────────────────────────────
+
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+
+const PAGE_HEADERS = {
+  'User-Agent':                 BROWSER_UA,
+  'Accept':                     'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+  'Accept-Language':            'en-US,en;q=0.9',
+  'Accept-Encoding':            'gzip, deflate, br',
+  'Connection':                 'keep-alive',
+  'Cache-Control':              'max-age=0',
+  'Sec-Ch-Ua':                  '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+  'Sec-Ch-Ua-Mobile':           '?0',
+  'Sec-Ch-Ua-Platform':         '"Windows"',
+  'Sec-Fetch-Dest':             'document',
+  'Sec-Fetch-Mode':             'navigate',
+  'Sec-Fetch-Site':             'none',
+  'Sec-Fetch-User':             '?1',
+  'Upgrade-Insecure-Requests':  '1',
+};
+
+const API_HEADERS = {
+  'User-Agent':          BROWSER_UA,
+  'Accept':              'application/json, text/javascript, */*; q=0.01',
+  'Accept-Language':     'en-US,en;q=0.9',
+  'Accept-Encoding':     'gzip, deflate, br',
+  'Connection':          'keep-alive',
+  'Sec-Ch-Ua':           '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+  'Sec-Ch-Ua-Mobile':    '?0',
+  'Sec-Ch-Ua-Platform':  '"Windows"',
+  'Sec-Fetch-Dest':      'empty',
+  'Sec-Fetch-Mode':      'cors',
+  'Sec-Fetch-Site':      'same-origin',
+  'X-Requested-With':    'XMLHttpRequest',
+};
+
+// ─── NSE session cookie (multi-step) ─────────────────────────────────────────
 
 async function getNSECookies() {
-  const res = await axios.get('https://www.nseindia.com', {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept':     'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    },
-    timeout: 20000,
+  // Step 1: Visit homepage to get initial cookies
+  const res1 = await axios.get('https://www.nseindia.com', {
+    headers: PAGE_HEADERS,
+    timeout: 15000,
+    maxRedirects: 5,
   });
-  return (res.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+
+  const cookies1 = (res1.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+  console.log('[NSE] Homepage cookies acquired');
+
+  // Brief human-like pause
+  await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
+
+  // Step 2: Visit corporate actions page to warm up session
+  try {
+    await axios.get('https://www.nseindia.com/companies-listing/corporate-filings-corporateActions', {
+      headers: {
+        ...PAGE_HEADERS,
+        'Cookie':  cookies1,
+        'Referer': 'https://www.nseindia.com/',
+        'Sec-Fetch-Site': 'same-origin',
+      },
+      timeout: 15000,
+      maxRedirects: 5,
+    });
+    console.log('[NSE] Corporate actions page visited');
+  } catch (err) {
+    // Non-fatal — some setups skip this
+    console.warn('[NSE] Corporate actions page visit failed (non-fatal):', err.message);
+  }
+
+  return cookies1;
 }
 
 // ─── Main fetch ───────────────────────────────────────────────────────────────
@@ -54,18 +115,17 @@ async function fetchNSE() {
   const fromStr = formatNSEDate(today);
   const toStr   = formatNSEDate(toDate);
 
-  // Step 1: get fresh session cookie
+  // Step 1: get fresh session cookie (multi-step)
   let cookies;
   try {
     cookies = await getNSECookies();
-    console.log('[NSE] Session cookie acquired');
   } catch (err) {
     console.error('[NSE] Failed to get session cookie:', err.message);
     throw err;
   }
 
-  // Brief pause to appear human-like
-  await new Promise(r => setTimeout(r, 2000));
+  // Human-like pause before API call
+  await new Promise(r => setTimeout(r, 2000 + Math.random() * 1500));
 
   // Step 2: fetch corporate actions
   const url = `https://www.nseindia.com/api/corporates-pit?index=equities&from_date=${fromStr}&to_date=${toStr}`;
@@ -74,16 +134,19 @@ async function fetchNSE() {
   try {
     const res = await axios.get(url, {
       headers: {
-        'User-Agent':  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept':      'application/json, text/plain, */*',
-        'Referer':     'https://www.nseindia.com/companies-listing/corporate-filings-corporateActions',
-        'Cookie':      cookies,
+        ...API_HEADERS,
+        'Cookie':  cookies,
+        'Referer': 'https://www.nseindia.com/companies-listing/corporate-filings-corporateActions',
       },
       timeout: 30000,
     });
-    records = res.data?.data || [];
+    records = res.data?.data || res.data || [];
+    if (!Array.isArray(records)) {
+      console.warn('[NSE] Unexpected response shape:', typeof records);
+      records = [];
+    }
   } catch (err) {
-    console.error('[NSE] API request failed:', err.message);
+    console.error('[NSE] API request failed:', err.response?.status, err.message);
     throw err;
   }
 
