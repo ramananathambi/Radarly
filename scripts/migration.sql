@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   name               VARCHAR(255) DEFAULT NULL,
   phone              VARCHAR(20)  NOT NULL DEFAULT '',
   email              VARCHAR(255) DEFAULT NULL,
+  password_hash      VARCHAR(255) DEFAULT NULL,
   is_verified        TINYINT(1)   NOT NULL DEFAULT 0,
   session_token      CHAR(36)     DEFAULT NULL,
   session_expires_at DATETIME     DEFAULT NULL,

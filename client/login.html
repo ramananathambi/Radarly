@@ -81,7 +81,30 @@
         </button>
       </div>
 
-      <div class="divider"><span>or</span></div>
+      <div class="divider"><span>or sign in with email</span></div>
+
+      <!-- Email + Password -->
+      <form id="email-form" style="text-align:center;">
+        <div class="form-group" id="name-group" style="display:none;text-align:center;">
+          <label for="reg-name">Full Name</label>
+          <input type="text" id="reg-name" placeholder="Your full name" style="text-align:center;" />
+        </div>
+        <div class="form-group" style="text-align:center;">
+          <label for="email-input">Email</label>
+          <input type="email" id="email-input" placeholder="you@example.com" required style="text-align:center;" />
+        </div>
+        <div class="form-group" style="text-align:center;">
+          <label for="password-input">Password</label>
+          <input type="password" id="password-input" placeholder="Min 8 characters" required minlength="8" style="text-align:center;" />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;" id="email-btn">Sign In</button>
+        <div style="margin-top:12px;font-size:13px;color:var(--text-secondary);">
+          <span id="toggle-mode-text">Don't have an account?</span>
+          <a href="#" id="toggle-mode-link" style="color:var(--accent);font-weight:600;" onclick="toggleAuthMode(event)">Register</a>
+        </div>
+      </form>
+
+      <div class="divider"><span>or use phone</span></div>
 
       <!-- Phone OTP -->
       <form id="phone-form">
@@ -187,6 +210,50 @@
         return showAlert('alert-box', 'Apple Sign-In is not yet configured. Please use Google or phone login.', 'error');
       }
     }
+
+    // ─── Email + Password ─────────────────────────────────────────────
+    let isRegisterMode = false;
+
+    function toggleAuthMode(e) {
+      e.preventDefault();
+      isRegisterMode = !isRegisterMode;
+      document.getElementById('name-group').style.display = isRegisterMode ? 'block' : 'none';
+      document.getElementById('email-btn').textContent = isRegisterMode ? 'Create Account' : 'Sign In';
+      document.getElementById('toggle-mode-text').textContent = isRegisterMode ? 'Already have an account?' : "Don't have an account?";
+      document.getElementById('toggle-mode-link').textContent = isRegisterMode ? 'Sign In' : 'Register';
+      if (isRegisterMode) document.getElementById('reg-name').setAttribute('required', '');
+      else document.getElementById('reg-name').removeAttribute('required');
+    }
+
+    const emailForm = document.getElementById('email-form');
+    emailForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('email-btn');
+      const email = document.getElementById('email-input').value.trim();
+      const password = document.getElementById('password-input').value;
+      const name = document.getElementById('reg-name').value.trim();
+
+      if (isRegisterMode && !name) {
+        return showAlert('alert-box', 'Please enter your name', 'error');
+      }
+
+      setLoading(btn, true);
+      try {
+        const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
+        const body = isRegisterMode ? { name, email, password } : { email, password };
+        const data = await api('POST', endpoint, body);
+        setToken(data.session_token);
+        if (data.needsOnboarding) {
+          window.location.href = '/onboarding.html';
+        } else {
+          window.location.href = '/dashboard.html';
+        }
+      } catch (err) {
+        showAlert('alert-box', err.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    });
 
     // ─── Phone OTP ────────────────────────────────────────────────────
     const form = document.getElementById('phone-form');

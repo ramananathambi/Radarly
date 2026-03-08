@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const crypto  = require('crypto');
+const bcrypt  = require('bcrypt');
 const { OAuth2Client } = require('google-auth-library');
 const jwt     = require('jsonwebtoken');
 const { pool } = require('../lib/db');
@@ -382,6 +383,124 @@ router.post('/apple', async (req, res) => {
     session_token: sessionToken,
     user: { id: user.id, name: user.name, phone: user.phone, email },
     isNewUser,
+    needsOnboarding: !user.name,
+  });
+});
+
+// ─── POST /api/auth/register — Email + Password registration ─────────────────
+
+router.post('/register', async (req, res) => {
+  const { name, email, password } = req.body;
+
+  if (!name?.trim()) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Valid email is required' });
+  }
+  if (!password || password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  }
+
+  // Check if email already taken
+  const [existing] = await pool.execute(
+    'SELECT id, password_hash FROM users WHERE email = ?',
+    [email.toLowerCase()]
+  );
+
+  if (existing.length > 0) {
+    if (existing[0].password_hash) {
+      return res.status(409).json({ error: 'An account with this email already exists. Please sign in.' });
+    }
+    // Email exists via Google/Apple but no password — let them set one
+    const passwordHash = await bcrypt.hash(password, 10);
+    const sessionToken = generateSessionToken();
+    const sessionExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    await pool.execute(
+      `UPDATE users SET password_hash = ?, name = COALESCE(name, ?), session_token = ?, session_expires_at = ?
+       WHERE id = ?`,
+      [passwordHash, name.trim(), sessionToken, sessionExpires, existing[0].id]
+    );
+
+    const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [existing[0].id]);
+    const user = rows[0];
+
+    return res.json({
+      success: true,
+      session_token: sessionToken,
+      user: { id: user.id, name: user.name, email: user.email },
+      needsOnboarding: false,
+    });
+  }
+
+  // New user
+  const userId = crypto.randomUUID();
+  const passwordHash = await bcrypt.hash(password, 10);
+  const sessionToken = generateSessionToken();
+  const sessionExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  try {
+    await pool.execute(
+      `INSERT INTO users (id, name, email, password_hash, phone, is_verified, session_token, session_expires_at)
+       VALUES (?, ?, ?, ?, '', 1, ?, ?)`,
+      [userId, name.trim(), email.toLowerCase(), passwordHash, sessionToken, sessionExpires]
+    );
+  } catch (err) {
+    console.error('[Auth] Register error:', err.message);
+    return res.status(500).json({ error: 'Failed to create account' });
+  }
+
+  await createDefaultPreferences(userId);
+
+  res.json({
+    success: true,
+    session_token: sessionToken,
+    user: { id: userId, name: name.trim(), email: email.toLowerCase() },
+    needsOnboarding: false,
+  });
+});
+
+// ─── POST /api/auth/login — Email + Password sign-in ─────────────────────────
+
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
+  const [rows] = await pool.execute(
+    'SELECT * FROM users WHERE email = ?',
+    [email.toLowerCase()]
+  );
+  const user = rows[0] || null;
+
+  if (!user) {
+    return res.status(401).json({ error: 'No account found with this email' });
+  }
+
+  if (!user.password_hash) {
+    return res.status(401).json({ error: 'This account uses Google or Phone sign-in. Please use that method.' });
+  }
+
+  const match = await bcrypt.compare(password, user.password_hash);
+  if (!match) {
+    return res.status(401).json({ error: 'Incorrect password' });
+  }
+
+  const sessionToken = generateSessionToken();
+  const sessionExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  await pool.execute(
+    'UPDATE users SET session_token = ?, session_expires_at = ? WHERE id = ?',
+    [sessionToken, sessionExpires, user.id]
+  );
+
+  res.json({
+    success: true,
+    session_token: sessionToken,
+    user: { id: user.id, name: user.name, email: user.email },
     needsOnboarding: !user.name,
   });
 });
