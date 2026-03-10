@@ -63,14 +63,6 @@
       color: var(--text-secondary);
       border: 1px solid var(--border);
     }
-    .account-card {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 20px;
-    }
-    .account-info span { color: var(--text-secondary); font-size: 13px; }
   </style>
 </head>
 <body>
@@ -80,6 +72,7 @@
       <a href="/dashboard.html">Dashboard</a>
       <a href="/stocks.html">Stocks</a>
       <a href="/settings.html" class="active">Alerts</a>
+      <a href="/account.html">Account</a>
       <a href="#" onclick="logout()">Logout</a>
     </div>
   </nav>
@@ -87,13 +80,7 @@
   <div class="container">
     <div id="alert-box"></div>
 
-    <h1 class="page-title">Alert Settings</h1>
-
-    <!-- Account Info -->
-    <div class="section-title">Your Account</div>
-    <div class="card account-card" id="account-card" style="margin-bottom:24px;">
-      <div class="spinner" style="margin:0;"></div>
-    </div>
+    <h1 class="page-title">Alert Settings <button class="refresh-btn" onclick="refreshData()" title="Refresh" id="refresh-btn"><span class="refresh-icon">&#x21bb;</span></button></h1>
 
     <!-- Active alerts -->
     <div class="section-title">Active Alert Types</div>
@@ -123,32 +110,22 @@
     (async () => {
       const user = await requireLogin();
       if (!user) return;
-
-      // Render account info
-      const accountCard = document.getElementById('account-card');
-      accountCard.innerHTML = `
-        <div class="account-info">
-          <div style="font-weight:600;font-size:16px;">${user.name || '—'}</div>
-          <span>${user.phone || '—'}</span>
-        </div>
-        <a href="/dashboard.html" class="btn btn-outline btn-sm">Dashboard</a>
-      `;
-
-      // Load preferences and alert_types
-      const [prefsRes, typesRes] = await Promise.all([
-        api('GET', '/api/user/preferences').catch(() => ({ preferences: [] })),
-        api('GET', '/api/stocks/sectors').catch(() => ({})), // just to ensure auth works
-      ]);
-
-      const prefs = prefsRes.preferences || [];
-
-      // Separate active vs inactive
-      const activePrefs = prefs.filter(p => p.alert_types?.is_active);
-      const inactivePrefs = prefs.filter(p => !p.alert_types?.is_active);
-
-      renderActivePrefs(activePrefs);
-      renderInactivePrefs(inactivePrefs);
+      await loadAlertPrefs();
     })();
+
+    async function loadAlertPrefs() {
+      const prefsRes = await api('GET', '/api/user/preferences').catch(() => ({ preferences: [] }));
+      const prefs = prefsRes.preferences || [];
+      renderActivePrefs(prefs.filter(p => p.alert_types?.is_active));
+      renderInactivePrefs(prefs.filter(p => !p.alert_types?.is_active));
+    }
+
+    async function refreshData() {
+      const btn = document.getElementById('refresh-btn');
+      btn.classList.add('spinning'); btn.disabled = true;
+      try { await loadAlertPrefs(); }
+      finally { btn.classList.remove('spinning'); btn.disabled = false; }
+    }
 
     function renderActivePrefs(prefs) {
       const container = document.getElementById('active-prefs');

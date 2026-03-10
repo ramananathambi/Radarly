@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account — Radarly</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <link rel="stylesheet" href="/assets/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-brand" href="/dashboard.html"><img src="/assets/logo-nav.png" alt="Radarly" class="nav-logo"></a>
+    <div class="nav-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/stocks.html">Stocks</a>
+      <a href="/settings.html">Alerts</a>
+      <a href="/account.html" class="active">Account</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="alert-box"></div>
+
+    <h1 class="page-title">Account <button class="refresh-btn" onclick="refreshData()" title="Refresh" id="refresh-btn"><span class="refresh-icon">&#x21bb;</span></button></h1>
+
+    <!-- Profile Info -->
+    <div class="section-title">Profile</div>
+    <div class="card" style="margin-bottom:24px;" id="profile-card">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Change Password -->
+    <div class="section-title">Change Password</div>
+    <div class="card" style="margin-bottom:24px;">
+      <div id="pw-alert"></div>
+      <p id="pw-note" style="display:none;font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+        You signed in via Google or Phone. Set a password below to enable email login.
+      </p>
+      <form id="pw-form">
+        <div class="form-group" id="current-pw-group">
+          <label for="current-pw">Current Password</label>
+          <input type="password" id="current-pw" placeholder="Enter current password" />
+        </div>
+        <div class="form-group">
+          <label for="new-pw">New Password</label>
+          <input type="password" id="new-pw" placeholder="Min 8 characters" minlength="8" required />
+        </div>
+        <div class="form-group">
+          <label for="confirm-pw">Confirm New Password</label>
+          <input type="password" id="confirm-pw" placeholder="Re-enter new password" required />
+        </div>
+        <button type="submit" class="btn btn-primary" id="pw-btn">Update Password</button>
+      </form>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="danger-zone">
+      <div class="section-title" style="color:var(--danger);">Danger Zone</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+        Permanently delete your account and all associated data. This action cannot be undone.
+      </p>
+      <button class="btn btn-danger" onclick="showDeleteModal()">Delete My Account</button>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay" id="delete-modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom:8px;color:var(--danger);">Delete Account?</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+        This will permanently delete your account, all saved stocks, alert preferences, and alert history. This cannot be undone.
+      </p>
+      <div class="form-group">
+        <label for="delete-confirm">Type <strong>DELETE</strong> to confirm</label>
+        <input type="text" id="delete-confirm" placeholder="DELETE" autocomplete="off" />
+      </div>
+      <div style="display:flex;gap:12px;">
+        <button class="btn btn-outline" onclick="hideDeleteModal()" style="flex:1;">Cancel</button>
+        <button class="btn btn-danger" id="delete-btn" onclick="deleteAccount()" style="flex:1;" disabled>Delete</button>
+      </div>
+      <div id="delete-alert" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">Built in Chennai ❤️</footer>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    let currentUser = null;
+
+    (async () => {
+      const user = await requireLogin();
+      if (!user) return;
+      currentUser = user;
+      renderProfile(user);
+    })();
+
+    function renderProfile(user) {
+      document.getElementById('profile-card').innerHTML = `
+        <div class="profile-field">
+          <span class="profile-label">Name</span>
+          <span class="profile-value">${user.name || '---'}</span>
+        </div>
+        <div class="profile-field">
+          <span class="profile-label">Email</span>
+          <span class="profile-value">${user.email || 'Not set'}</span>
+        </div>
+        <div class="profile-field">
+          <span class="profile-label">Phone</span>
+          <span class="profile-value">${user.phone || 'Not set'}</span>
+        </div>
+      `;
+
+      // Show/hide current password field
+      if (user.hasPassword === false) {
+        document.getElementById('current-pw-group').style.display = 'none';
+        document.getElementById('pw-note').style.display = 'block';
+      }
+    }
+
+    // Password change
+    document.getElementById('pw-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('pw-btn');
+      const currentPw = document.getElementById('current-pw').value;
+      const newPw = document.getElementById('new-pw').value;
+      const confirmPw = document.getElementById('confirm-pw').value;
+
+      if (newPw !== confirmPw) {
+        return showAlert('pw-alert', 'Passwords do not match', 'error');
+      }
+      if (newPw.length < 8) {
+        return showAlert('pw-alert', 'Password must be at least 8 characters', 'error');
+      }
+
+      setLoading(btn, true);
+      try {
+        const body = { newPassword: newPw };
+        if (currentPw) body.currentPassword = currentPw;
+        await api('PUT', '/api/user/password', body);
+        showAlert('pw-alert', 'Password updated successfully', 'success');
+        document.getElementById('pw-form').reset();
+        // Now user has a password, show current password field
+        document.getElementById('current-pw-group').style.display = '';
+        document.getElementById('pw-note').style.display = 'none';
+      } catch (err) {
+        showAlert('pw-alert', err.message || 'Failed to update password', 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+
+    // Delete modal
+    function showDeleteModal() {
+      document.getElementById('delete-modal').classList.add('active');
+      document.getElementById('delete-confirm').value = '';
+      document.getElementById('delete-btn').disabled = true;
+    }
+
+    function hideDeleteModal() {
+      document.getElementById('delete-modal').classList.remove('active');
+    }
+
+    document.getElementById('delete-confirm').addEventListener('input', (e) => {
+      document.getElementById('delete-btn').disabled = e.target.value.trim() !== 'DELETE';
+    });
+
+    async function deleteAccount() {
+      const confirmVal = document.getElementById('delete-confirm').value.trim();
+      if (confirmVal !== 'DELETE') return;
+
+      const btn = document.getElementById('delete-btn');
+      setLoading(btn, true);
+      try {
+        await api('DELETE', '/api/user/account', { confirmation: 'DELETE' });
+        clearToken();
+        window.location.href = '/login.html';
+      } catch (err) {
+        showAlert('delete-alert', err.message || 'Failed to delete account', 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // Refresh
+    async function refreshData() {
+      const btn = document.getElementById('refresh-btn');
+      btn.classList.add('spinning'); btn.disabled = true;
+      try {
+        const user = await api('GET', '/api/user/me');
+        if (user) { currentUser = user; renderProfile(user); }
+      } finally { btn.classList.remove('spinning'); btn.disabled = false; }
+    }
+  </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 const express = require('express');
 const router  = express.Router();
+const bcrypt  = require('bcrypt');
 const { pool }          = require('../lib/db');
 const { requireAuth }   = require('../middleware/auth');
 
@@ -179,11 +180,89 @@ router.put('/preferences', async (req, res) => {
 
 // GET /api/user/me — current user info (used by frontend to check session)
 router.get('/me', async (req, res) => {
-  res.json({
-    id:    req.user.id,
-    name:  req.user.name,
-    phone: req.user.phone,
-  });
+  try {
+    const [rows] = await pool.execute(
+      'SELECT password_hash FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    res.json({
+      id:          req.user.id,
+      name:        req.user.name,
+      phone:       req.user.phone,
+      email:       req.user.email,
+      hasPassword: !!rows[0]?.password_hash,
+    });
+  } catch (err) {
+    res.json({
+      id:    req.user.id,
+      name:  req.user.name,
+      phone: req.user.phone,
+      email: req.user.email,
+    });
+  }
+});
+
+// PUT /api/user/password — change password
+router.put('/password', async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      'SELECT password_hash FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    const user = rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // If user has existing password, verify current one
+    if (user.password_hash) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required' });
+      }
+      const match = await bcrypt.compare(currentPassword, user.password_hash);
+      if (!match) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, req.user.id]);
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('[User] Password change error:', err.message);
+    return res.status(500).json({ error: 'Failed to update password' });
+  }
+});
+
+// DELETE /api/user/account — permanently delete account and all data
+router.delete('/account', async (req, res) => {
+  const { confirmation } = req.body;
+  if (confirmation !== 'DELETE') {
+    return res.status(400).json({ error: 'Please type DELETE to confirm account deletion' });
+  }
+
+  const userId = req.user.id;
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+    await conn.execute('DELETE FROM alert_log WHERE user_id = ?', [userId]);
+    await conn.execute('DELETE FROM user_alert_preferences WHERE user_id = ?', [userId]);
+    await conn.execute('DELETE FROM user_stocks WHERE user_id = ?', [userId]);
+    await conn.execute('DELETE FROM users WHERE id = ?', [userId]);
+    await conn.commit();
+    res.json({ success: true, message: 'Account deleted' });
+  } catch (err) {
+    await conn.rollback();
+    console.error('[User] Account deletion error:', err.message);
+    return res.status(500).json({ error: 'Failed to delete account' });
+  } finally {
+    conn.release();
+  }
 });
 
 module.exports = router;

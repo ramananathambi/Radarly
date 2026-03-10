@@ -62,6 +62,7 @@
       <a href="/dashboard.html">Dashboard</a>
       <a href="/stocks.html" class="active">Stocks</a>
       <a href="/settings.html">Alerts</a>
+      <a href="/account.html">Account</a>
       <a href="#" onclick="logout()">Logout</a>
     </div>
   </nav>
@@ -69,7 +70,7 @@
   <div class="container">
     <div id="alert-box"></div>
 
-    <h1 class="page-title">Browse Stocks</h1>
+    <h1 class="page-title">Browse Stocks <button class="refresh-btn" onclick="refreshData()" title="Refresh" id="refresh-btn"><span class="refresh-icon">&#x21bb;</span></button></h1>
 
     <div class="selected-count" id="selected-count"></div>
 
@@ -113,6 +114,9 @@
     let savedSymbols = new Set();
     let searchTimeout = null;
     let isSearchMode = false;
+    let sortColumn = 'symbol';
+    let sortDirection = 'asc';
+    let currentStocksData = [];
 
     (async () => {
       const user = await requireLogin();
@@ -205,6 +209,23 @@
       }
     }
 
+    function toggleSort(col) {
+      if (sortColumn === col) { sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; }
+      else { sortColumn = col; sortDirection = 'asc'; }
+      renderStocks(currentStocksData);
+    }
+
+    function sortStocksData() {
+      currentStocksData.sort((a, b) => {
+        let valA = a[sortColumn], valB = b[sortColumn];
+        if (sortColumn === 'last_price') { valA = parseFloat(valA) || 0; valB = parseFloat(valB) || 0; }
+        else { valA = (valA || '').toString().toLowerCase(); valB = (valB || '').toString().toLowerCase(); }
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
     function renderStocks(stocks) {
       const container = document.getElementById('stocks-container');
 
@@ -214,11 +235,20 @@
         return;
       }
 
+      currentStocksData = [...stocks];
+      sortStocksData();
+
+      const sc = (col) => `sortable ${sortColumn === col ? sortDirection : ''}`;
       let html = '<div class="table-wrap"><table><thead><tr>';
-      html += '<th>Symbol</th><th>Company</th><th style="text-align:right;">LTP (₹)</th><th>Exchange</th><th>Sector</th><th style="text-align:center;">Watchlist</th>';
+      html += `<th class="${sc('symbol')}" onclick="toggleSort('symbol')">Symbol</th>`;
+      html += `<th class="${sc('company_name')}" onclick="toggleSort('company_name')">Company</th>`;
+      html += `<th class="${sc('last_price')}" style="text-align:right;" onclick="toggleSort('last_price')">LTP (₹)</th>`;
+      html += '<th>Exchange</th>';
+      html += `<th class="${sc('sector')}" onclick="toggleSort('sector')">Sector</th>`;
+      html += '<th style="text-align:center;">Watchlist</th>';
       html += '</tr></thead><tbody>';
 
-      for (const s of stocks) {
+      for (const s of currentStocksData) {
         const isSaved = savedSymbols.has(s.symbol);
         const btnClass = isSaved ? 'bookmark-btn saved' : 'bookmark-btn';
         const btnText = isSaved ? 'Saved' : '+ Add';
@@ -305,6 +335,22 @@
       }
 
       btn.disabled = false;
+    }
+
+    async function refreshData() {
+      const btn = document.getElementById('refresh-btn');
+      btn.classList.add('spinning'); btn.disabled = true;
+      try {
+        const stocksRes = await api('GET', '/api/user/stocks').catch(() => ({ stocks: [] }));
+        savedSymbols = new Set(stocksRes.stocks.map(s => s.symbol));
+        updateSelectedCount();
+        if (isSearchMode) {
+          const q = document.getElementById('search-input').value.trim();
+          if (q.length >= 2) await searchStocks(q);
+        } else {
+          await loadStocks();
+        }
+      } finally { btn.classList.remove('spinning'); btn.disabled = false; }
     }
   </script>
 </body>
