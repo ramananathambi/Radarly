@@ -3,45 +3,45 @@
 /* Hero Section */
 .lp-hero {
   background: var(--bg);
-  padding: 60px 16px 40px;
+  padding: 80px 16px 60px;
 }
 .lp-hero-inner {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 60px;
+  gap: 80px;
 }
 .lp-hero-text {
   flex: 1;
 }
 .lp-hero-text h1 {
-  font-size: 48px;
+  font-size: 56px;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.08;
   letter-spacing: -0.03em;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 .lp-hero-text h1 span {
   color: var(--accent);
 }
 .lp-hero-text p {
-  font-size: 18px;
+  font-size: 20px;
   color: var(--text-secondary);
   line-height: 1.6;
-  margin-bottom: 32px;
-  max-width: 440px;
+  margin-bottom: 36px;
+  max-width: 480px;
 }
 .lp-cta {
-  font-size: 16px;
-  padding: 14px 36px;
+  font-size: 17px;
+  padding: 16px 40px;
   text-decoration: none;
 }
 .lp-cta:hover { text-decoration: none; }
 .lp-hero-note {
   font-size: 13px;
   color: var(--text-secondary);
-  margin-top: 12px;
+  margin-top: 14px;
 }
 .lp-hero-visual {
   flex: 0 0 auto;
@@ -49,21 +49,21 @@
 
 /* Phone Mockup */
 .phone-frame {
-  width: 280px;
+  width: 380px;
   background: #1a1a1a;
-  border-radius: 36px;
-  padding: 12px;
-  box-shadow: 0 24px 48px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.08);
+  border-radius: 44px;
+  padding: 14px;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06), inset 0 0 0 2px rgba(255,255,255,0.05);
   position: relative;
 }
 .phone-frame-lg {
-  width: 300px;
+  width: 400px;
 }
 .phone-notch {
-  width: 100px;
-  height: 24px;
+  width: 120px;
+  height: 28px;
   background: #1a1a1a;
-  border-radius: 0 0 16px 16px;
+  border-radius: 0 0 18px 18px;
   margin: 0 auto;
   position: relative;
   z-index: 2;
@@ -71,74 +71,99 @@
 }
 .phone-screen {
   background: #e5ddd5;
-  border-radius: 24px;
+  border-radius: 30px;
   overflow: hidden;
-  margin-top: -12px;
+  margin-top: -14px;
 }
 
 /* WhatsApp UI */
 .wa-header {
   background: #075e54;
-  padding: 28px 14px 10px;
+  padding: 32px 16px 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .wa-avatar {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   flex-shrink: 0;
 }
 .wa-name {
   color: #fff;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
 }
 .wa-status {
   color: rgba(255,255,255,0.7);
-  font-size: 11px;
+  font-size: 12px;
 }
 .wa-chat {
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   background: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c9b99a' fill-opacity='0.08'%3E%3Ccircle cx='20' cy='20' r='2'/%3E%3Ccircle cx='60' cy='60' r='2'/%3E%3C/g%3E%3C/svg%3E") #e5ddd5;
-  min-height: 200px;
+  min-height: 240px;
 }
 .wa-bubble {
   background: #dcf8c6;
-  border-radius: 0 8px 8px 8px;
-  padding: 8px 10px;
+  border-radius: 0 10px 10px 10px;
+  padding: 10px 14px;
   max-width: 95%;
   position: relative;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 .wa-bubble-full {
   max-width: 100%;
 }
 .wa-msg-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--accent);
   letter-spacing: 0.05em;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .wa-msg-text {
-  font-size: 12px;
+  font-size: 13.5px;
   color: #303030;
-  line-height: 1.5;
+  line-height: 1.55;
+}
+.wa-stock-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.wa-stock-row:last-child {
+  border-bottom: none;
+}
+.wa-stock-name {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.wa-stock-detail {
+  font-size: 12.5px;
+  color: #555;
+  text-align: right;
+}
+.wa-msg-footer {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
 }
 .wa-time {
-  font-size: 10px;
+  font-size: 11px;
   color: #999;
   text-align: right;
   margin-top: 4px;
@@ -342,17 +367,18 @@
     gap: 40px;
   }
   .lp-hero-text h1 {
-    font-size: 32px;
+    font-size: 36px;
   }
   .lp-hero-text p {
     margin-left: auto;
     margin-right: auto;
+    font-size: 17px;
   }
   .phone-frame {
-    width: 240px;
+    width: 300px;
   }
   .phone-frame-lg {
-    width: 260px;
+    width: 320px;
   }
   .lp-section {
     padding: 36px 16px;
