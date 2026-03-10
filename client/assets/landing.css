@@ -47,126 +47,135 @@
   flex: 0 0 auto;
 }
 
-/* Phone Mockup */
+/* Phone Mockup — iPhone 15 style */
 .phone-frame {
-  width: 380px;
+  width: 300px;
   background: #1a1a1a;
-  border-radius: 44px;
-  padding: 14px;
-  box-shadow: 0 32px 64px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06), inset 0 0 0 2px rgba(255,255,255,0.05);
+  border-radius: 48px;
+  padding: 10px;
+  box-shadow:
+    0 40px 80px rgba(0,0,0,0.22),
+    0 0 0 1px rgba(255,255,255,0.08),
+    inset 0 0 0 1.5px rgba(255,255,255,0.06);
   position: relative;
 }
 .phone-frame-lg {
-  width: 400px;
+  width: 320px;
 }
+/* Dynamic Island */
 .phone-notch {
-  width: 120px;
-  height: 28px;
-  background: #1a1a1a;
-  border-radius: 0 0 18px 18px;
+  width: 90px;
+  height: 26px;
+  background: #000;
+  border-radius: 20px;
   margin: 0 auto;
   position: relative;
   z-index: 2;
-  top: 0;
+  top: 4px;
 }
 .phone-screen {
   background: #e5ddd5;
-  border-radius: 30px;
+  border-radius: 38px;
   overflow: hidden;
   margin-top: -14px;
+  min-height: 520px;
+}
+.phone-frame-lg .phone-screen {
+  min-height: 580px;
 }
 
 /* WhatsApp UI */
 .wa-header {
   background: #075e54;
-  padding: 32px 16px 12px;
+  padding: 36px 14px 10px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 .wa-avatar {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   flex-shrink: 0;
 }
 .wa-name {
   color: #fff;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
 }
 .wa-status {
   color: rgba(255,255,255,0.7);
-  font-size: 12px;
+  font-size: 11px;
 }
 .wa-chat {
-  padding: 14px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   background: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c9b99a' fill-opacity='0.08'%3E%3Ccircle cx='20' cy='20' r='2'/%3E%3Ccircle cx='60' cy='60' r='2'/%3E%3C/g%3E%3C/svg%3E") #e5ddd5;
-  min-height: 240px;
+  flex: 1;
 }
 .wa-bubble {
   background: #dcf8c6;
-  border-radius: 0 10px 10px 10px;
-  padding: 10px 14px;
-  max-width: 95%;
+  border-radius: 0 8px 8px 8px;
+  padding: 8px 10px;
+  max-width: 96%;
   position: relative;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 1px rgba(0,0,0,0.08);
 }
 .wa-bubble-full {
   max-width: 100%;
 }
 .wa-msg-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--accent);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   margin-bottom: 6px;
+  text-transform: uppercase;
 }
 .wa-msg-text {
-  font-size: 13.5px;
+  font-size: 12px;
   color: #303030;
-  line-height: 1.55;
+  line-height: 1.5;
 }
-.wa-stock-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 4px 0;
+.wa-stock-block {
+  padding: 6px 0;
   border-bottom: 1px solid rgba(0,0,0,0.06);
 }
-.wa-stock-row:last-child {
+.wa-stock-block:last-of-type {
   border-bottom: none;
 }
-.wa-stock-name {
-  font-weight: 600;
-  font-size: 13.5px;
+.wa-stock-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: #1a1a1a;
+  margin-bottom: 2px;
 }
-.wa-stock-detail {
-  font-size: 12.5px;
-  color: #555;
-  text-align: right;
+.wa-stock-info {
+  font-size: 11px;
+  color: #444;
+  line-height: 1.45;
 }
 .wa-msg-footer {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #666;
-  font-style: italic;
+  margin-top: 6px;
+  padding-top: 6px;
+  font-size: 11px;
+  color: #555;
+  border-top: 1px solid rgba(0,0,0,0.06);
 }
 .wa-time {
-  font-size: 11px;
+  font-size: 10px;
   color: #999;
   text-align: right;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 /* Sections */
@@ -375,10 +384,16 @@
     font-size: 17px;
   }
   .phone-frame {
-    width: 300px;
+    width: 270px;
   }
   .phone-frame-lg {
-    width: 320px;
+    width: 290px;
+  }
+  .phone-screen {
+    min-height: 460px;
+  }
+  .phone-frame-lg .phone-screen {
+    min-height: 500px;
   }
   .lp-section {
     padding: 36px 16px;
