@@ -202,6 +202,59 @@ router.get('/me', async (req, res) => {
   }
 });
 
+// PUT /api/user/profile — update name and/or phone
+router.put('/profile', async (req, res) => {
+  const { name, phone } = req.body;
+
+  if (name === undefined && phone === undefined) {
+    return res.status(400).json({ error: 'Nothing to update' });
+  }
+
+  if (name !== undefined && !name?.trim()) {
+    return res.status(400).json({ error: 'Name cannot be empty' });
+  }
+
+  if (phone !== undefined && phone !== '' && !/^\+91[6-9]\d{9}$/.test(phone)) {
+    return res.status(400).json({ error: 'Invalid phone number. Use format: +91XXXXXXXXXX' });
+  }
+
+  // Check phone uniqueness
+  if (phone && phone !== '') {
+    const [existing] = await pool.execute(
+      'SELECT id FROM users WHERE phone = ? AND id != ?',
+      [phone, req.user.id]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({ error: 'This phone number is already linked to another account' });
+    }
+  }
+
+  const setClauses = [];
+  const params = [];
+
+  if (name !== undefined) {
+    setClauses.push('name = ?');
+    params.push(name.trim());
+  }
+  if (phone !== undefined) {
+    setClauses.push('phone = ?');
+    params.push(phone);
+  }
+
+  params.push(req.user.id);
+
+  try {
+    await pool.execute(
+      `UPDATE users SET ${setClauses.join(', ')} WHERE id = ?`,
+      params
+    );
+    res.json({ success: true, message: 'Profile updated successfully' });
+  } catch (err) {
+    console.error('[User] Profile update error:', err.message);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
 // PUT /api/user/password — change password
 router.put('/password', async (req, res) => {
   const { currentPassword, newPassword } = req.body;

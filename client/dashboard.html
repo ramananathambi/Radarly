@@ -67,6 +67,16 @@
         weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
       });
 
+      // Phone nudge — prompt users without a phone number
+      if (!user.phone) {
+        document.getElementById('alert-box').innerHTML = `
+          <div class="alert alert-warning" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <span>Add your WhatsApp number to receive stock alerts.</span>
+            <a href="/account.html" class="btn btn-primary" style="text-decoration:none;padding:6px 16px;font-size:13px;">Add Phone Number</a>
+          </div>
+        `;
+      }
+
       await loadDashboardData();
     })();
 
