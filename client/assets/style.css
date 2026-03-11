@@ -199,13 +199,13 @@ th.sortable.desc::after { border-top-color: var(--accent); opacity: 1; }
 
 /* Refresh button */
 .refresh-btn {
-  background: none; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius);
   padding: 6px 10px; cursor: pointer; font-size: 16px; line-height: 1;
-  color: var(--text-secondary); transition: all 0.2s;
+  color: #fff; transition: all 0.2s;
   display: inline-flex; align-items: center; justify-content: center;
   vertical-align: middle; margin-left: 12px;
 }
-.refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+.refresh-btn:hover { background: #aa0000; border-color: #aa0000; color: #fff; }
 .refresh-btn.spinning .refresh-icon { animation: spin 0.7s linear infinite; }
 .refresh-icon { display: inline-block; }
 
