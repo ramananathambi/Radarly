@@ -194,8 +194,8 @@ th.sortable::after {
   content: ''; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
   border: 6px solid transparent; border-top-color: rgba(255,255,255,0.5); opacity: 0.7;
 }
-th.sortable.asc::after { border-top-color: transparent; border-bottom-color: #fff; opacity: 1; top: 38%; }
-th.sortable.desc::after { border-top-color: #fff; opacity: 1; }
+th.sortable.asc::after { border-top-color: transparent; border-bottom-color: var(--accent); opacity: 1; top: 38%; }
+th.sortable.desc::after { border-top-color: var(--accent); opacity: 1; }
 
 /* Refresh button */
 .refresh-btn {
