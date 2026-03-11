@@ -375,6 +375,64 @@
   color: var(--accent);
 }
 
+/* ─── Premium Effects ─────────────────────────────── */
+
+/* 1. Hero entrance — staggered on load */
+@keyframes hero-in {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.lp-hero-text h1       { animation: hero-in 0.75s ease forwards; }
+.lp-hero-text p        { animation: hero-in 0.75s 0.15s ease forwards; opacity: 0; }
+.lp-hero-text .lp-cta  { animation: hero-in 0.75s 0.28s ease forwards; opacity: 0; }
+.lp-hero-text .lp-hero-note { animation: hero-in 0.75s 0.38s ease forwards; opacity: 0; }
+.lp-hero-visual        { animation: hero-in 0.85s 0.2s ease forwards; opacity: 0; }
+
+/* 2. Floating phone */
+@keyframes phone-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-14px); }
+}
+.lp-hero-visual .phone-frame {
+  animation: phone-float 4s ease-in-out infinite;
+}
+
+/* 3. Word cycling transition */
+#hero-word {
+  display: inline-block;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* 4. Scroll fade-in */
+.scroll-fade {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+.scroll-fade.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.scroll-fade-children > * {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.scroll-fade-children.visible > *:nth-child(1) { transition-delay: 0s; }
+.scroll-fade-children.visible > *:nth-child(2) { transition-delay: 0.1s; }
+.scroll-fade-children.visible > *:nth-child(3) { transition-delay: 0.2s; }
+.scroll-fade-children.visible > *:nth-child(4) { transition-delay: 0.3s; }
+.scroll-fade-children.visible > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 5. Enhanced feature card hover */
+.lp-feature-card:hover {
+  box-shadow: 0 16px 40px rgba(0,0,0,0.13);
+  transform: translateY(-7px);
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .lp-hero {
