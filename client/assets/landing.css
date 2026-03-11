@@ -394,16 +394,18 @@
     font-size: 17px;
   }
   .phone-frame {
-    width: 270px;
+    width: 300px;
   }
   .phone-frame-lg {
-    width: 290px;
+    width: 320px;
   }
   .phone-screen {
-    min-height: 460px;
+    min-height: 500px;
+    max-height: 500px;
   }
   .phone-frame-lg .phone-screen {
-    min-height: 500px;
+    min-height: 540px;
+    max-height: 540px;
   }
   .lp-section {
     padding: 36px 16px;
