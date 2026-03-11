@@ -231,7 +231,7 @@ th.sortable.desc::after { border-top-color: var(--accent); opacity: 1; }
   padding: 32px 16px;
   margin-top: 48px;
   background: #111111;
-  color: rgba(255,255,255,0.5);
+  color: #ffffff;
   font-size: 13px;
   border-top: none;
 }
