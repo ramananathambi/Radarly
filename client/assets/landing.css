@@ -80,9 +80,18 @@
   border-radius: 38px;
   overflow: hidden;
   min-height: 520px;
+  max-height: 520px;
 }
 .phone-frame-lg .phone-screen {
-  min-height: 580px;
+  min-height: 560px;
+  max-height: 560px;
+}
+.lp-preview-phone .phone-screen {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.lp-preview-phone .phone-screen::-webkit-scrollbar {
+  display: none;
 }
 
 /* WhatsApp UI */
