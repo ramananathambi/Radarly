@@ -97,10 +97,10 @@
       font-weight: 600;
     }
 
-    /* ── Stat card icon badge + tinted background ─────── */
-    .stat-card-events { background: #fafaf9; }
-    .stat-card-stocks { background: #f5f5f4; }
-    .stat-card-today  { background: #e7e5e4; }
+    /* ── Stat card — black background, red icon ─────── */
+    .stat-card-events,
+    .stat-card-stocks,
+    .stat-card-today  { background: #111111; border-color: transparent; }
     .stat-icon-wrap {
       width: 44px;
       height: 44px;
@@ -110,9 +110,19 @@
       justify-content: center;
       margin-bottom: 14px;
     }
-    .stat-card-events .stat-icon-wrap { background: #44403c; }
-    .stat-card-stocks .stat-icon-wrap { background: #57534e; }
-    .stat-card-today  .stat-icon-wrap { background: #292524; }
+    .stat-card-events .stat-icon-wrap,
+    .stat-card-stocks .stat-icon-wrap,
+    .stat-card-today  .stat-icon-wrap { background: #cc0000; }
+    /* Text colours on dark cards */
+    .stat-card-events .summary-label,
+    .stat-card-stocks .summary-label,
+    .stat-card-today  .summary-label  { color: rgba(255,255,255,0.5); }
+    .stat-card-events .summary-value,
+    .stat-card-stocks .summary-value,
+    .stat-card-today  .summary-value  { color: #ffffff; }
+    .stat-card-events .summary-action,
+    .stat-card-stocks .summary-action,
+    .stat-card-today  .summary-action { color: #ff4444; }
 
     /* ── Section header row ──────────────────────────────── */
     .section-header {
