@@ -483,6 +483,9 @@
     transform: rotate(90deg);
     padding: 0;
   }
+  .scroll-fade-children.visible > .lp-step-arrow {
+    transform: rotate(90deg);
+  }
   .lp-preview-card {
     flex-direction: column;
     gap: 40px;
