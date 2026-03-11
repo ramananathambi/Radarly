@@ -190,9 +190,11 @@
   <script src="/assets/app.js"></script>
   <script>
     // ── State ───────────────────────────────────────────────────────────────
-    let allEvents   = [];
+    let allEvents    = [];
     let activeFilter = 'ALL';
     let activeDays   = 30;
+    let sortColumn   = 'ex_date';
+    let sortDir      = 'asc';
 
     const DAY_OPTIONS = [7, 14, 30, 60, 90];
 
@@ -392,6 +394,33 @@
       return str.length > n ? str.substring(0, n) + '…' : str;
     }
 
+    // ── Sort ─────────────────────────────────────────────────────────────────
+    function toggleSort(col) {
+      if (sortColumn === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+      else { sortColumn = col; sortDir = 'asc'; }
+      const filtered = activeFilter === 'ALL' ? allEvents : allEvents.filter(e => e.action_type === activeFilter);
+      renderEvents(filtered);
+    }
+
+    function sortEventsData(events) {
+      return [...events].sort((a, b) => {
+        let valA, valB;
+        if (sortColumn === 'company_name') {
+          valA = (a.stocks_master?.company_name || '').toLowerCase();
+          valB = (b.stocks_master?.company_name || '').toLowerCase();
+        } else if (sortColumn === 'exchange') {
+          valA = (a.stocks_master?.exchange || '').toLowerCase();
+          valB = (b.stocks_master?.exchange || '').toLowerCase();
+        } else {
+          valA = (a[sortColumn] || '').toString().toLowerCase();
+          valB = (b[sortColumn] || '').toString().toLowerCase();
+        }
+        if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
     // ── Render events table ─────────────────────────────────────────────────
     function renderEvents(events) {
       const container = document.getElementById('events-container');
@@ -404,11 +433,19 @@
         return;
       }
 
+      const sorted = sortEventsData(events);
+      const sc = (col) => `sortable ${sortColumn === col ? sortDir : ''}`;
+
       let html = '<div class="table-wrap"><table><thead><tr>';
-      html += '<th>Type</th><th>Symbol</th><th>Company</th><th>Ex-Date</th><th>Details</th><th>Exchange</th>';
+      html += `<th class="${sc('action_type')}" onclick="toggleSort('action_type')">Type</th>`;
+      html += `<th class="${sc('symbol')}" onclick="toggleSort('symbol')">Symbol</th>`;
+      html += `<th class="${sc('company_name')}" onclick="toggleSort('company_name')">Company</th>`;
+      html += `<th class="${sc('ex_date')}" onclick="toggleSort('ex_date')">Ex-Date</th>`;
+      html += '<th>Details</th>';
+      html += `<th class="${sc('exchange')}" onclick="toggleSort('exchange')">Exchange</th>`;
       html += '</tr></thead><tbody>';
 
-      for (const ev of events) {
+      for (const ev of sorted) {
         const co        = ev.stocks_master?.company_name || ev.symbol;
         const exchange  = ev.stocks_master?.exchange || '—';
         const badgeCls  = exchange === 'NSE' ? 'badge-nse' : exchange === 'BSE' ? 'badge-bse' : 'badge-both';
