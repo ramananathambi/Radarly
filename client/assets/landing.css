@@ -400,12 +400,12 @@
     width: 290px;
   }
   .phone-screen {
-    min-height: 460px;
-    max-height: 460px;
-  }
-  .phone-frame-lg .phone-screen {
     min-height: 500px;
     max-height: 500px;
+  }
+  .phone-frame-lg .phone-screen {
+    min-height: 540px;
+    max-height: 540px;
   }
   .lp-section {
     padding: 36px 16px;
