@@ -4,6 +4,23 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const { startScheduler } = require('./jobs/scheduler');
+const { pool } = require('./lib/db');
+
+async function initDb() {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS password_reset_otps (
+        email       VARCHAR(255) PRIMARY KEY,
+        otp_code    VARCHAR(6),
+        reset_token VARCHAR(64),
+        expires_at  DATETIME NOT NULL
+      )
+    `);
+    console.log('[DB] password_reset_otps table ready');
+  } catch (err) {
+    console.error('[DB] Migration error:', err.message);
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,8 +51,9 @@ app.get('*', (req, res) => {
 });
 
 // Start server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   console.log(`[Radarly] Server running on http://localhost:${PORT}`);
+  await initDb();
   startScheduler();
 });
 

@@ -1,11 +1,21 @@
-const express = require('express');
-const router  = express.Router();
-const crypto  = require('crypto');
-const bcrypt  = require('bcrypt');
+const express    = require('express');
+const router     = express.Router();
+const crypto     = require('crypto');
+const bcrypt     = require('bcrypt');
+const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const jwt     = require('jsonwebtoken');
 const { pool } = require('../lib/db');
 require('dotenv').config();
+
+// Auto-create password_reset_otps table
+pool.execute(`
+  CREATE TABLE IF NOT EXISTS password_reset_otps (
+    email      VARCHAR(255) PRIMARY KEY,
+    otp_code   VARCHAR(6)   NOT NULL,
+    expires_at DATETIME     NOT NULL
+  )
+`).catch(err => console.error('[Auth] Table init error:', err.message));
 
 const googleClient = process.env.GOOGLE_CLIENT_ID
   ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
@@ -518,6 +528,105 @@ router.get('/config', (req, res) => {
     googleClientId: process.env.GOOGLE_CLIENT_ID || null,
     appleEnabled: !!process.env.APPLE_CLIENT_ID,
   });
+});
+
+// ─── Email OTP helper ────────────────────────────────────────────────────────
+
+async function sendResetOTP(email, otp) {
+  if (process.env.DEV_MODE === 'true') {
+    console.log(`[DEV] Password reset OTP for ${email}: ${otp}`);
+    return;
+  }
+  const transporter = nodemailer.createTransport({
+    host:   process.env.SMTP_HOST,
+    port:   parseInt(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_PORT === '465',
+    auth:   { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+  await transporter.sendMail({
+    from:    process.env.SMTP_FROM || 'Radarly <noreply@radarly.in>',
+    to:      email,
+    subject: 'Your Radarly password reset OTP',
+    text:    `Your Radarly password reset OTP is: ${otp}\n\nValid for 10 minutes. Do not share this code.`,
+    html:    `<p style="font-family:sans-serif;">Your Radarly password reset OTP is:</p><h2 style="letter-spacing:4px;">${otp}</h2><p style="color:#666;font-size:13px;">Valid for 10 minutes. Do not share this code.</p>`,
+  });
+}
+
+// ─── POST /api/auth/forgot-password ──────────────────────────────────────────
+
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Valid email is required' });
+  }
+
+  const [rows] = await pool.execute(
+    'SELECT id FROM users WHERE email = ?',
+    [email.toLowerCase()]
+  );
+
+  // Always respond success to avoid revealing whether email is registered
+  if (!rows.length) return res.json({ success: true });
+
+  const otp       = generateOTP();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await pool.execute(
+    `INSERT INTO password_reset_otps (email, otp_code, expires_at)
+     VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE otp_code = VALUES(otp_code), expires_at = VALUES(expires_at)`,
+    [email.toLowerCase(), otp, expiresAt]
+  );
+
+  try {
+    await sendResetOTP(email, otp);
+  } catch (err) {
+    console.error('[Auth] Reset OTP email error:', err.message);
+    return res.status(500).json({ error: 'Failed to send OTP email. Please try again.' });
+  }
+
+  res.json({ success: true });
+});
+
+// ─── POST /api/auth/reset-password ───────────────────────────────────────────
+
+router.post('/reset-password', async (req, res) => {
+  const { email, otp, password } = req.body;
+
+  if (!email || !otp || !password) {
+    return res.status(400).json({ error: 'Email, OTP and new password are required' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  }
+
+  const [rows] = await pool.execute(
+    'SELECT * FROM password_reset_otps WHERE email = ?',
+    [email.toLowerCase()]
+  );
+  const record = rows[0] || null;
+
+  if (!record) {
+    return res.status(400).json({ error: 'OTP not found. Please request a new one.' });
+  }
+  if (new Date() > new Date(record.expires_at)) {
+    await pool.execute('DELETE FROM password_reset_otps WHERE email = ?', [email.toLowerCase()]);
+    return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+  }
+  if (record.otp_code !== otp.trim()) {
+    return res.status(400).json({ error: 'Incorrect OTP. Please try again.' });
+  }
+
+  await pool.execute('DELETE FROM password_reset_otps WHERE email = ?', [email.toLowerCase()]);
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  await pool.execute(
+    'UPDATE users SET password_hash = ? WHERE email = ?',
+    [passwordHash, email.toLowerCase()]
+  );
+
+  res.json({ success: true });
 });
 
 // ─── POST /api/auth/logout ────────────────────────────────────────────────────

@@ -101,8 +101,56 @@
         <div id="toggle-row" style="margin-top:12px;font-size:13px;color:var(--text-secondary);display:none;">
           <span id="toggle-mode-text">Don't have an account?</span>
           <a href="#" id="toggle-mode-link" style="color:var(--accent);font-weight:600;" onclick="toggleAuthMode(event)">Register</a>
+          &nbsp;·&nbsp;
+          <a href="#" id="forgot-link" style="color:var(--text-secondary);" onclick="showForgot(event)">Forgot password?</a>
         </div>
       </form>
+
+      <!-- ── Forgot Password Flow ───────────────────────────────────────── -->
+      <div id="forgot-flow" style="display:none;">
+        <div id="alert-box-forgot"></div>
+
+        <!-- Step 1: Enter email -->
+        <div id="forgot-step-1">
+          <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;text-align:center;">Enter your account email and we'll send you a reset OTP.</p>
+          <div class="form-group" style="text-align:center;">
+            <label for="forgot-email">Email Address</label>
+            <input type="email" id="forgot-email" placeholder="you@example.com" style="text-align:center;" />
+          </div>
+          <button class="btn btn-primary" style="width:100%;" id="forgot-send-btn" onclick="sendForgotOTP()">Send OTP</button>
+        </div>
+
+        <!-- Step 2: Enter OTP -->
+        <div id="forgot-step-2" style="display:none;">
+          <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;text-align:center;">Enter the 6-digit OTP sent to <strong id="forgot-email-display"></strong></p>
+          <div class="form-group" style="text-align:center;">
+            <label for="forgot-otp">OTP Code</label>
+            <input type="text" id="forgot-otp" placeholder="123456" maxlength="6" style="text-align:center;letter-spacing:6px;font-size:20px;" />
+          </div>
+          <button class="btn btn-primary" style="width:100%;" id="forgot-verify-btn" onclick="verifyForgotOTP()">Verify OTP</button>
+          <div style="margin-top:10px;text-align:center;font-size:13px;color:var(--text-secondary);">
+            Didn't receive it? <a href="#" style="color:var(--accent);" onclick="sendForgotOTP(event)">Resend</a>
+          </div>
+        </div>
+
+        <!-- Step 3: New password -->
+        <div id="forgot-step-3" style="display:none;">
+          <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;text-align:center;">Choose a new password for your account.</p>
+          <div class="form-group" style="text-align:center;">
+            <label for="forgot-newpass">New Password</label>
+            <input type="password" id="forgot-newpass" placeholder="Min 8 characters" minlength="8" style="text-align:center;" />
+          </div>
+          <div class="form-group" style="text-align:center;">
+            <label for="forgot-confirmpass">Confirm Password</label>
+            <input type="password" id="forgot-confirmpass" placeholder="Repeat password" style="text-align:center;" />
+          </div>
+          <button class="btn btn-primary" style="width:100%;" id="forgot-reset-btn" onclick="resetPassword()">Reset Password</button>
+        </div>
+
+        <div style="margin-top:14px;text-align:center;font-size:13px;">
+          <a href="#" style="color:var(--text-secondary);" onclick="hideForgot(event)">← Back to Sign In</a>
+        </div>
+      </div>
 
       <div style="margin-top:24px;text-align:center;color:var(--text-secondary);font-size:13px;">
         By signing in, you agree to receive WhatsApp alerts from Radarly.
@@ -327,6 +375,102 @@
     window.addEventListener('load', () => {
       setTimeout(initGoogle, 500);
     });
+
+    // ─── Forgot Password Flow ─────────────────────────────────────────────
+    let forgotEmail = '';
+
+    function showForgot(e) {
+      e.preventDefault();
+      forgotEmail = document.getElementById('identity-input').value.trim();
+      if (forgotEmail) document.getElementById('forgot-email').value = forgotEmail;
+      document.getElementById('auth-form').style.display = 'none';
+      document.getElementById('forgot-flow').style.display = 'block';
+      document.getElementById('alert-box').innerHTML = '';
+    }
+
+    function hideForgot(e) {
+      e.preventDefault();
+      document.getElementById('forgot-flow').style.display = 'none';
+      document.getElementById('auth-form').style.display = 'block';
+      // Reset forgot flow state
+      showForgotStep(1);
+      document.getElementById('alert-box-forgot').innerHTML = '';
+    }
+
+    function showForgotStep(n) {
+      document.getElementById('forgot-step-1').style.display = n === 1 ? 'block' : 'none';
+      document.getElementById('forgot-step-2').style.display = n === 2 ? 'block' : 'none';
+      document.getElementById('forgot-step-3').style.display = n === 3 ? 'block' : 'none';
+    }
+
+    async function sendForgotOTP(e) {
+      if (e) e.preventDefault();
+      const email = document.getElementById('forgot-email').value.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return showAlert('alert-box-forgot', 'Please enter a valid email address', 'error');
+      }
+      forgotEmail = email;
+      const btn = document.getElementById('forgot-send-btn');
+      setLoading(btn, true);
+      try {
+        await api('POST', '/api/auth/forgot-password', { email });
+        document.getElementById('forgot-email-display').textContent = email;
+        showAlert('alert-box-forgot', `OTP sent to ${email}`, 'success');
+        showForgotStep(2);
+      } catch (err) {
+        showAlert('alert-box-forgot', err.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    async function verifyForgotOTP() {
+      const otp = document.getElementById('forgot-otp').value.trim();
+      if (!otp || otp.length !== 6) {
+        return showAlert('alert-box-forgot', 'Enter the 6-digit OTP', 'error');
+      }
+      const btn = document.getElementById('forgot-verify-btn');
+      setLoading(btn, true);
+      try {
+        // Verify OTP lightly by attempting a dry-run — actually just move to step 3
+        // Real verification happens on reset-password
+        showForgotStep(3);
+        document.getElementById('alert-box-forgot').innerHTML = '';
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    async function resetPassword() {
+      const otp      = document.getElementById('forgot-otp').value.trim();
+      const password = document.getElementById('forgot-newpass').value;
+      const confirm  = document.getElementById('forgot-confirmpass').value;
+
+      if (password.length < 8) {
+        return showAlert('alert-box-forgot', 'Password must be at least 8 characters', 'error');
+      }
+      if (password !== confirm) {
+        return showAlert('alert-box-forgot', 'Passwords do not match', 'error');
+      }
+
+      const btn = document.getElementById('forgot-reset-btn');
+      setLoading(btn, true);
+      try {
+        await api('POST', '/api/auth/reset-password', { email: forgotEmail, otp, password });
+        showAlert('alert-box-forgot', 'Password reset successfully! Redirecting to sign in…', 'success');
+        setTimeout(() => {
+          hideForgot({ preventDefault: () => {} });
+          document.getElementById('identity-input').value = forgotEmail;
+          identityInput.dispatchEvent(new Event('input'));
+        }, 2000);
+      } catch (err) {
+        showAlert('alert-box-forgot', err.message, 'error');
+        // If OTP wrong, go back to OTP step
+        if (err.message.toLowerCase().includes('otp')) showForgotStep(2);
+      } finally {
+        setLoading(btn, false);
+      }
+    }
   </script>
 </body>
 </html>
