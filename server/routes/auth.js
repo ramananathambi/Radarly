@@ -39,11 +39,17 @@ async function sendOTP(phone, otp) {
 }
 
 async function createDefaultPreferences(userId) {
-  await pool.execute(
-    `INSERT IGNORE INTO user_alert_preferences (user_id, alert_type, scope, is_enabled)
-     VALUES (?, 'DIVIDEND', 'all_stocks', 1)`,
-    [userId]
+  // Dynamically insert preferences for all active alert types
+  const [activeTypes] = await pool.execute(
+    'SELECT code FROM alert_types WHERE is_active = 1'
   );
+  for (const { code } of activeTypes) {
+    await pool.execute(
+      `INSERT IGNORE INTO user_alert_preferences (user_id, alert_type, scope, is_enabled)
+       VALUES (?, ?, 'all_stocks', 1)`,
+      [userId, code]
+    );
+  }
 }
 
 // ─── POST /api/auth/otp/send ──────────────────────────────────────────────────

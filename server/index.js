@@ -24,6 +24,7 @@ app.use('/api/auth',      require('./routes/auth'));
 app.use('/api/stocks',    require('./routes/stocks'));
 app.use('/api/user',      require('./routes/user'));
 app.use('/api/dividends', require('./routes/dividends'));
+app.use('/api/events',    require('./routes/events'));
 app.use('/api/webhooks',  require('./routes/webhooks'));
 app.use('/api/admin',     require('./routes/admin'));
 

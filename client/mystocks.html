@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Stocks — Radarly</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <link rel="stylesheet" href="/assets/style.css" />
+  <style>
+    .page-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .page-actions .btn {
+      text-decoration: none;
+      padding: 8px 18px;
+      font-size: 13px;
+    }
+    .stock-count-badge {
+      font-size: 13px;
+      color: var(--text-secondary);
+      flex: 1;
+    }
+    .remove-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .remove-btn:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+    .price-cell {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-secondary);
+    }
+    .empty-state p { margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a class="nav-brand" href="/dashboard.html"><img src="/assets/logo-nav.png" alt="Radarly" class="nav-logo"></a>
+    <div class="nav-links">
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/stocks.html">Stocks</a>
+      <a href="/settings.html">Alerts</a>
+      <a href="/account.html">Account</a>
+      <a href="#" onclick="logout()" style="color:var(--danger)">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="alert-box"></div>
+
+    <h1 class="page-title">My Stocks <button class="refresh-btn" onclick="refreshData()" title="Refresh" id="refresh-btn"><span class="refresh-icon">&#x21bb;</span></button></h1>
+
+    <div class="page-actions">
+      <span class="stock-count-badge" id="stock-count"></span>
+      <a href="/stocks.html" class="btn btn-primary">+ Browse &amp; Add Stocks</a>
+      <a href="/dashboard.html" class="btn" style="background:var(--surface);border:1px solid var(--border);">← Dashboard</a>
+    </div>
+
+    <div id="stocks-container">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">Built in Chennai ❤️ for India 🇮🇳</footer>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    (async () => {
+      const user = await requireLogin();
+      if (!user) return;
+      await loadMyStocks();
+    })();
+
+    async function loadMyStocks() {
+      const container = document.getElementById('stocks-container');
+      container.innerHTML = '<div class="spinner"></div>';
+
+      try {
+        const data = await api('GET', '/api/user/stocks');
+        const stocks = data.stocks || [];
+
+        document.getElementById('stock-count').textContent =
+          `${stocks.length} stock${stocks.length !== 1 ? 's' : ''} in your watchlist`;
+
+        if (stocks.length === 0) {
+          container.innerHTML = `
+            <div class="card empty-state">
+              <p>You haven't added any stocks yet.</p>
+              <a href="/stocks.html" class="btn btn-primary">Browse Stocks</a>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '<div class="table-wrap"><table><thead><tr>';
+        html += '<th>Symbol</th><th>Company</th><th style="text-align:right;">LTP (₹)</th><th>Exchange</th><th>Sector</th><th style="text-align:center;">Remove</th>';
+        html += '</tr></thead><tbody>';
+
+        for (const s of stocks) {
+          const co  = s.stocks_master?.company_name || s.symbol;
+          const ex  = s.stocks_master?.exchange || '—';
+          const sec = s.stocks_master?.sector || '—';
+          const badgeClass = ex === 'NSE' ? 'badge-nse' : ex === 'BSE' ? 'badge-bse' : 'badge-both';
+
+          const ltp = s.stocks_master?.last_price
+            ? `₹${Number(s.stocks_master.last_price).toLocaleString('en-IN', {
+                minimumFractionDigits: 2, maximumFractionDigits: 2
+              })}`
+            : '<span style="color:var(--text-secondary);font-size:12px;">—</span>';
+
+          html += `<tr>
+            <td><strong>${s.symbol}</strong></td>
+            <td>${co}</td>
+            <td class="price-cell" style="text-align:right;">${ltp}</td>
+            <td><span class="badge ${badgeClass}">${ex}</span></td>
+            <td style="color:var(--text-secondary);font-size:13px;">${sec}</td>
+            <td style="text-align:center;">
+              <button class="remove-btn" onclick="removeStock('${s.symbol}', this)">Remove</button>
+            </td>
+          </tr>`;
+        }
+
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = `<div class="card" style="color:var(--danger);">Failed to load stocks: ${err.message}</div>`;
+      }
+    }
+
+    async function removeStock(symbol, btn) {
+      btn.disabled = true;
+      btn.textContent = '...';
+      try {
+        await api('DELETE', `/api/user/stocks/${symbol}`);
+        // Refresh the list
+        await loadMyStocks();
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Remove';
+        showAlert('alert-box', err.message, 'error');
+      }
+    }
+
+    async function refreshData() {
+      const btn = document.getElementById('refresh-btn');
+      btn.classList.add('spinning'); btn.disabled = true;
+      try { await loadMyStocks(); }
+      finally { btn.classList.remove('spinning'); btn.disabled = false; }
+    }
+  </script>
+</body>
+</html>

@@ -6,6 +6,111 @@
   <title>Dashboard — Radarly</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   <link rel="stylesheet" href="/assets/style.css" />
+  <style>
+    /* ── Event type badges ───────────────────────────────── */
+    .event-badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    .ev-dividend { background: #dcfce7; color: #166534; }
+    .ev-bonus    { background: #dbeafe; color: #1e40af; }
+    .ev-split    { background: #ede9fe; color: #5b21b6; }
+    .ev-buyback  { background: #ffedd5; color: #9a3412; }
+    .ev-ipo      { background: #fef9c3; color: #713f12; }
+    .ev-rights   { background: #fce7f3; color: #831843; }
+    .ev-default  { background: var(--bg); color: var(--text-secondary); }
+
+    /* ── Filter tabs ─────────────────────────────────────── */
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .filter-tab {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .filter-tab:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-tab.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* ── Summary cards ───────────────────────────────────── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .summary-card { cursor: default; }
+    .summary-card.clickable { cursor: pointer; transition: box-shadow 0.15s; }
+    .summary-card.clickable:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .summary-label {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .summary-value {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .summary-action {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ── Section header row ──────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .section-header h2 { margin: 0; }
+    .days-chip {
+      font-size: 12px;
+      color: var(--text-secondary);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 3px 10px;
+    }
+
+    /* ── Event details cell ──────────────────────────────── */
+    .ev-details {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .ev-details strong { color: var(--text); font-weight: 600; }
+
+    /* ── No events empty state ───────────────────────────── */
+    .no-events {
+      padding: 32px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
   <nav class="nav">
@@ -25,30 +130,34 @@
     <h1 class="page-title" id="greeting">Dashboard</h1>
 
     <!-- Summary cards -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;">
-      <div class="card">
-        <div style="color:var(--text-secondary);font-size:13px;">Alert Preference</div>
-        <div style="font-size:20px;font-weight:700;margin-top:4px;" id="pref-summary">—</div>
+    <div class="summary-grid">
+      <div class="card summary-card">
+        <div class="summary-label">Upcoming Events</div>
+        <div class="summary-value" id="event-count">—</div>
+        <div class="summary-action">Next 14 days</div>
       </div>
-      <div class="card">
-        <div style="color:var(--text-secondary);font-size:13px;">My Selected Stocks</div>
-        <div style="font-size:20px;font-weight:700;margin-top:4px;" id="stock-count">—</div>
+      <div class="card summary-card clickable" onclick="window.location.href='/mystocks.html'" title="View My Stocks">
+        <div class="summary-label">My Stocks</div>
+        <div class="summary-value" id="stock-count">—</div>
+        <div class="summary-action">View My Stocks →</div>
       </div>
-      <div class="card">
-        <div style="color:var(--text-secondary);font-size:13px;">Today</div>
-        <div style="font-size:20px;font-weight:700;margin-top:4px;" id="today-date">—</div>
+      <div class="card summary-card">
+        <div class="summary-label">Today</div>
+        <div class="summary-value" id="today-date" style="font-size:15px;font-weight:600;margin-top:6px;">—</div>
       </div>
     </div>
 
-    <!-- Upcoming dividends -->
-    <h2 style="margin-bottom:16px;">Upcoming Dividends (Next 7 days)</h2>
-    <div id="dividends-container">
-      <div class="spinner"></div>
+    <!-- Upcoming Events section -->
+    <div class="section-header">
+      <h2>Upcoming Events</h2>
+      <span class="days-chip">Next 14 days</span>
     </div>
 
-    <!-- User's stocks with upcoming actions -->
-    <h2 style="margin-top:32px;margin-bottom:16px;">My Stocks</h2>
-    <div id="my-stocks-container">
+    <!-- Filter tabs (populated after data loads) -->
+    <div class="filter-tabs" id="filter-tabs"></div>
+
+    <!-- Events table -->
+    <div id="events-container">
       <div class="spinner"></div>
     </div>
   </div>
@@ -57,17 +166,24 @@
 
   <script src="/assets/app.js"></script>
   <script>
+    // ── All events data (stored for client-side filtering) ──────────────────
+    let allEvents = [];
+    let activeFilter = 'ALL';
+
     (async () => {
       const user = await requireLogin();
       if (!user) return;
 
+      // Greeting
       const greetEl = document.getElementById('greeting');
       greetEl.innerHTML = `Hi ${user.name || 'there'}! <button class="refresh-btn" onclick="refreshData()" title="Refresh" id="refresh-btn"><span class="refresh-icon">&#x21bb;</span></button>`;
+
+      // Today
       document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-IN', {
         weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
       });
 
-      // Phone nudge — prompt users without a phone number
+      // Phone nudge
       if (!user.phone) {
         document.getElementById('alert-box').innerHTML = `
           <div class="alert alert-warning" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
@@ -80,66 +196,169 @@
       await loadDashboardData();
     })();
 
+    // ── Load all data in parallel ──────────────────────────────────────────
     async function loadDashboardData() {
-      const [prefs, stocks, divs] = await Promise.all([
-        api('GET', '/api/user/preferences').catch(() => ({ preferences: [] })),
+      const [stocksRes, eventsRes] = await Promise.all([
         api('GET', '/api/user/stocks').catch(() => ({ stocks: [] })),
-        api('GET', '/api/dividends/upcoming').catch(() => ({ dividends: [] })),
+        api('GET', '/api/events/upcoming?days=14').catch(() => ({ events: [] })),
       ]);
 
-      // Pref summary
-      const divPref = prefs.preferences.find(p => p.alert_type === 'DIVIDEND');
-      if (divPref) {
-        const status = divPref.is_enabled ? 'ON' : 'OFF';
-        const scope = divPref.scope === 'all_stocks' ? 'All Stocks' : 'Selected Only';
-        document.getElementById('pref-summary').textContent = `Dividends: ${status} (${scope})`;
-      }
-
       // Stock count
-      document.getElementById('stock-count').textContent = stocks.stocks.length;
+      document.getElementById('stock-count').textContent = stocksRes.stocks.length;
 
-      // Upcoming dividends
-      const divsContainer = document.getElementById('dividends-container');
-      if (divs.dividends.length === 0) {
-        divsContainer.innerHTML = '<div class="card" style="color:var(--text-secondary);">No upcoming dividends in the next 7 days.</div>';
-      } else {
-        let html = '<div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Company</th><th>Ex-Date</th><th>Dividend</th><th>Exchange</th></tr></thead><tbody>';
-        for (const d of divs.dividends) {
-          const amount = d.details?.amount ? `₹${d.details.amount}` : '—';
-          const co = d.stocks_master?.company_name || d.symbol;
-          const badge = d.stocks_master?.exchange || '—';
-          const badgeClass = badge === 'NSE' ? 'badge-nse' : badge === 'BSE' ? 'badge-bse' : 'badge-both';
-          html += `<tr><td><strong>${d.symbol}</strong></td><td>${co}</td><td>${formatDate(d.ex_date)}</td><td>${amount}</td><td><span class="badge ${badgeClass}">${badge}</span></td></tr>`;
-        }
-        html += '</tbody></table></div>';
-        divsContainer.innerHTML = html;
-      }
+      // Store events and render
+      allEvents = eventsRes.events || [];
+      document.getElementById('event-count').textContent = allEvents.length;
 
-      // My stocks
-      const myContainer = document.getElementById('my-stocks-container');
-      if (stocks.stocks.length === 0) {
-        myContainer.innerHTML = '<div class="card" style="color:var(--text-secondary);">No stocks selected. <a href="/stocks.html">Browse stocks</a> to add some.</div>';
-      } else {
-        let html = '<div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Company</th><th style="text-align:right;">LTP (₹)</th><th>Exchange</th><th>Sector</th></tr></thead><tbody>';
-        for (const s of stocks.stocks) {
-          const co = s.stocks_master?.company_name || s.symbol;
-          const ex = s.stocks_master?.exchange || '—';
-          const sec = s.stocks_master?.sector || '—';
-          const ltp = s.stocks_master?.last_price
-            ? `₹${Number(s.stocks_master.last_price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-            : '<span style="color:var(--text-secondary);font-size:12px;">—</span>';
-          html += `<tr><td><strong>${s.symbol}</strong></td><td>${co}</td><td style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums;">${ltp}</td><td>${ex}</td><td>${sec}</td></tr>`;
-        }
-        html += '</tbody></table></div>';
-        myContainer.innerHTML = html;
-      }
+      renderFilterTabs();
+      renderEvents(allEvents);
     }
 
+    // ── Filter tabs ────────────────────────────────────────────────────────
+    function renderFilterTabs() {
+      const typesInData = [...new Set(allEvents.map(e => e.action_type))].sort();
+      const tabsEl = document.getElementById('filter-tabs');
+
+      if (typesInData.length <= 1) {
+        tabsEl.style.display = 'none';
+        return;
+      }
+
+      tabsEl.style.display = 'flex';
+      const tabs = ['ALL', ...typesInData];
+
+      tabsEl.innerHTML = tabs.map(t => `
+        <button class="filter-tab ${t === activeFilter ? 'active' : ''}"
+                onclick="setFilter('${t}')">
+          ${t === 'ALL' ? 'All Types' : formatType(t)}
+          ${t !== 'ALL' ? `<span style="margin-left:4px;opacity:0.7;">(${allEvents.filter(e => e.action_type === t).length})</span>` : ''}
+        </button>
+      `).join('');
+    }
+
+    function setFilter(type) {
+      activeFilter = type;
+      // Update active tab
+      document.querySelectorAll('.filter-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim().startsWith(type === 'ALL' ? 'All' : formatType(type)));
+      });
+      const filtered = type === 'ALL' ? allEvents : allEvents.filter(e => e.action_type === type);
+      renderEvents(filtered);
+    }
+
+    // ── Event type helpers ─────────────────────────────────────────────────
+    function formatType(code) {
+      const names = {
+        DIVIDEND: 'Dividend',
+        BONUS:    'Bonus',
+        SPLIT:    'Split',
+        BUYBACK:  'Buyback',
+        IPO:      'IPO',
+        RIGHTS:   'Rights',
+      };
+      return names[code] || code;
+    }
+
+    function eventBadgeClass(code) {
+      const cls = {
+        DIVIDEND: 'ev-dividend',
+        BONUS:    'ev-bonus',
+        SPLIT:    'ev-split',
+        BUYBACK:  'ev-buyback',
+        IPO:      'ev-ipo',
+        RIGHTS:   'ev-rights',
+      };
+      return cls[code] || 'ev-default';
+    }
+
+    // ── Build detail string per action type ───────────────────────────────
+    function buildDetails(event) {
+      const d = event.details || {};
+      const lastPrice = event.stocks_master?.last_price;
+      const type = event.action_type;
+      const raw = d.raw_purpose || '';
+
+      if (type === 'DIVIDEND') {
+        const amount = d.amount;
+        if (amount) {
+          const yieldPct = lastPrice ? ((amount / lastPrice) * 100).toFixed(2) : null;
+          return `<strong>₹${amount}/share</strong>` +
+            (yieldPct ? `<br>Yield: ${yieldPct}%` : '');
+        }
+        return raw ? truncate(raw, 60) : '—';
+      }
+
+      if (type === 'BONUS') {
+        // Extract ratio like "1:1", "1:2" from raw_purpose
+        const ratioMatch = raw.match(/\d+\s*:\s*\d+/);
+        if (ratioMatch) return `<strong>Ratio: ${ratioMatch[0]}</strong>`;
+        return raw ? truncate(raw, 60) : '—';
+      }
+
+      if (type === 'SPLIT') {
+        const ratioMatch = raw.match(/\d+\s*:\s*\d+/);
+        if (ratioMatch) return `<strong>Ratio: ${ratioMatch[0]}</strong>`;
+        return raw ? truncate(raw, 60) : '—';
+      }
+
+      if (type === 'BUYBACK') {
+        // Extract price like "Rs. 450" from raw_purpose
+        const priceMatch = raw.match(/(?:RS\.?\s*|INR\s*|₹\s*)(\d+(?:\.\d+)?)/i);
+        if (priceMatch) return `<strong>Price: ₹${priceMatch[1]}</strong>`;
+        return raw ? truncate(raw, 60) : '—';
+      }
+
+      return raw ? truncate(raw, 60) : '—';
+    }
+
+    function truncate(str, n) {
+      return str.length > n ? str.substring(0, n) + '…' : str;
+    }
+
+    // ── Render events table ────────────────────────────────────────────────
+    function renderEvents(events) {
+      const container = document.getElementById('events-container');
+
+      if (events.length === 0) {
+        container.innerHTML = '<div class="card no-events">No upcoming events in the next 14 days.</div>';
+        return;
+      }
+
+      let html = '<div class="table-wrap"><table><thead><tr>';
+      html += '<th>Type</th><th>Symbol</th><th>Company</th><th>Ex-Date</th><th>Details</th><th>Exchange</th>';
+      html += '</tr></thead><tbody>';
+
+      for (const ev of events) {
+        const co        = ev.stocks_master?.company_name || ev.symbol;
+        const exchange  = ev.stocks_master?.exchange || '—';
+        const badgeCls  = exchange === 'NSE' ? 'badge-nse' : exchange === 'BSE' ? 'badge-bse' : 'badge-both';
+        const typeClass = eventBadgeClass(ev.action_type);
+        const details   = buildDetails(ev);
+
+        html += `<tr>
+          <td><span class="event-badge ${typeClass}">${formatType(ev.action_type)}</span></td>
+          <td><strong>${ev.symbol}</strong></td>
+          <td style="font-size:13px;">${co}</td>
+          <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${formatDate(ev.ex_date)}</td>
+          <td class="ev-details">${details}</td>
+          <td><span class="badge ${badgeCls}">${exchange}</span></td>
+        </tr>`;
+      }
+
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    }
+
+    // ── Refresh ────────────────────────────────────────────────────────────
     async function refreshData() {
       const btn = document.getElementById('refresh-btn');
       btn.classList.add('spinning'); btn.disabled = true;
-      try { await loadDashboardData(); }
-      finally { btn.classList.remove('spinning'); btn.disabled = false; }
+      try {
+        activeFilter = 'ALL';
+        await loadDashboardData();
+      } finally {
+        btn.classList.remove('spinning'); btn.disabled = false;
+      }
     }
   </script>
 </body>
