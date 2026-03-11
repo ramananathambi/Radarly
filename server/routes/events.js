@@ -2,10 +2,10 @@ const express = require('express');
 const router  = express.Router();
 const { pool } = require('../lib/db');
 
-// GET /api/events/upcoming?days=14
+// GET /api/events/upcoming?days=30
 // Returns all corporate actions across all types for the next N days
 router.get('/upcoming', async (req, res) => {
-  const days = Math.min(60, parseInt(req.query.days) || 14);
+  const days = Math.min(365, parseInt(req.query.days) || 30);
 
   const today  = new Date();
   const toDate = new Date();

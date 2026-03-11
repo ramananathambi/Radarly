@@ -25,12 +25,22 @@
     .ev-rights   { background: #fce7f3; color: #831843; }
     .ev-default  { background: var(--bg); color: var(--text-secondary); }
 
-    /* ── Filter tabs ─────────────────────────────────────── */
-    .filter-tabs {
+    /* ── Filter tabs (shared by both time-range and type rows) ── */
+    .filter-row {
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
-      margin-bottom: 16px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .filter-row-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-right: 4px;
+      white-space: nowrap;
     }
     .filter-tab {
       padding: 5px 14px;
@@ -48,6 +58,17 @@
       background: var(--accent);
       color: #fff;
       border-color: var(--accent);
+    }
+    /* Time range row uses a subtler accent */
+    .range-tab.active {
+      background: var(--text);
+      color: var(--surface);
+      border-color: var(--text);
+    }
+    .range-tab:hover { border-color: var(--text); color: var(--text); }
+
+    .filters-wrap {
+      margin-bottom: 16px;
     }
 
     /* ── Summary cards ───────────────────────────────────── */
@@ -83,17 +104,9 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .section-header h2 { margin: 0; }
-    .days-chip {
-      font-size: 12px;
-      color: var(--text-secondary);
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 3px 10px;
-    }
 
     /* ── Event details cell ──────────────────────────────── */
     .ev-details {
@@ -134,7 +147,7 @@
       <div class="card summary-card">
         <div class="summary-label">Upcoming Events</div>
         <div class="summary-value" id="event-count">—</div>
-        <div class="summary-action">Next 14 days</div>
+        <div class="summary-action" id="event-range-label">Next 30 days</div>
       </div>
       <div class="card summary-card clickable" onclick="window.location.href='/mystocks.html'" title="View My Stocks">
         <div class="summary-label">My Stocks</div>
@@ -150,11 +163,21 @@
     <!-- Upcoming Events section -->
     <div class="section-header">
       <h2>Upcoming Events</h2>
-      <span class="days-chip">Next 14 days</span>
     </div>
 
-    <!-- Filter tabs (populated after data loads) -->
-    <div class="filter-tabs" id="filter-tabs"></div>
+    <!-- Filters -->
+    <div class="filters-wrap">
+      <!-- Time range row -->
+      <div class="filter-row" id="range-tabs">
+        <span class="filter-row-label">Show:</span>
+        <!-- populated by JS -->
+      </div>
+      <!-- Event type row (hidden until multiple types exist) -->
+      <div class="filter-row" id="type-tabs" style="display:none;">
+        <span class="filter-row-label">Type:</span>
+        <!-- populated by JS -->
+      </div>
+    </div>
 
     <!-- Events table -->
     <div id="events-container">
@@ -166,10 +189,14 @@
 
   <script src="/assets/app.js"></script>
   <script>
-    // ── All events data (stored for client-side filtering) ──────────────────
-    let allEvents = [];
+    // ── State ───────────────────────────────────────────────────────────────
+    let allEvents   = [];
     let activeFilter = 'ALL';
+    let activeDays   = 30;
 
+    const DAY_OPTIONS = [7, 14, 30, 60, 90];
+
+    // ── Init ────────────────────────────────────────────────────────────────
     (async () => {
       const user = await requireLogin();
       if (!user) return;
@@ -193,60 +220,97 @@
         `;
       }
 
+      renderRangeTabs();
       await loadDashboardData();
     })();
 
-    // ── Load all data in parallel ──────────────────────────────────────────
+    // ── Load data ───────────────────────────────────────────────────────────
     async function loadDashboardData() {
+      // Show spinner in events area while fetching
+      document.getElementById('events-container').innerHTML = '<div class="spinner"></div>';
+
       const [stocksRes, eventsRes] = await Promise.all([
         api('GET', '/api/user/stocks').catch(() => ({ stocks: [] })),
-        api('GET', '/api/events/upcoming?days=14').catch(() => ({ events: [] })),
+        api('GET', `/api/events/upcoming?days=${activeDays}`).catch(() => ({ events: [] })),
       ]);
 
       // Stock count
       document.getElementById('stock-count').textContent = stocksRes.stocks.length;
 
-      // Store events and render
-      allEvents = eventsRes.events || [];
-      document.getElementById('event-count').textContent = allEvents.length;
+      // Store events
+      allEvents    = eventsRes.events || [];
+      activeFilter = 'ALL';  // Reset type filter on every data reload
 
-      renderFilterTabs();
+      // Update summary card
+      document.getElementById('event-count').textContent = allEvents.length;
+      document.getElementById('event-range-label').textContent = `Next ${activeDays} days`;
+
+      renderTypeTabs();
       renderEvents(allEvents);
     }
 
-    // ── Filter tabs ────────────────────────────────────────────────────────
-    function renderFilterTabs() {
+    // ── Time range chips ────────────────────────────────────────────────────
+    function renderRangeTabs() {
+      const row = document.getElementById('range-tabs');
+      // Keep the label span, replace only the buttons
+      const label = row.querySelector('.filter-row-label');
+      row.innerHTML = '';
+      row.appendChild(label);
+
+      for (const d of DAY_OPTIONS) {
+        const btn = document.createElement('button');
+        btn.className = `filter-tab range-tab${d === activeDays ? ' active' : ''}`;
+        btn.textContent = d < 30 ? `${d} days` : d === 30 ? '1 month' : d === 60 ? '2 months' : '3 months';
+        btn.onclick = () => setDays(d);
+        row.appendChild(btn);
+      }
+    }
+
+    async function setDays(days) {
+      if (days === activeDays) return;
+      activeDays = days;
+      renderRangeTabs();
+      await loadDashboardData();
+    }
+
+    // ── Event type chips ────────────────────────────────────────────────────
+    function renderTypeTabs() {
       const typesInData = [...new Set(allEvents.map(e => e.action_type))].sort();
-      const tabsEl = document.getElementById('filter-tabs');
+      const row = document.getElementById('type-tabs');
 
       if (typesInData.length <= 1) {
-        tabsEl.style.display = 'none';
+        row.style.display = 'none';
         return;
       }
 
-      tabsEl.style.display = 'flex';
-      const tabs = ['ALL', ...typesInData];
+      row.style.display = 'flex';
+      const label = row.querySelector('.filter-row-label');
+      row.innerHTML = '';
+      row.appendChild(label);
 
-      tabsEl.innerHTML = tabs.map(t => `
-        <button class="filter-tab ${t === activeFilter ? 'active' : ''}"
-                onclick="setFilter('${t}')">
-          ${t === 'ALL' ? 'All Types' : formatType(t)}
-          ${t !== 'ALL' ? `<span style="margin-left:4px;opacity:0.7;">(${allEvents.filter(e => e.action_type === t).length})</span>` : ''}
-        </button>
-      `).join('');
+      const tabs = ['ALL', ...typesInData];
+      for (const t of tabs) {
+        const count = t === 'ALL' ? allEvents.length : allEvents.filter(e => e.action_type === t).length;
+        const btn = document.createElement('button');
+        btn.className = `filter-tab${t === activeFilter ? ' active' : ''}`;
+        btn.dataset.type = t;
+        btn.innerHTML = `${t === 'ALL' ? 'All Types' : formatType(t)} <span style="opacity:0.65;font-size:12px;">(${count})</span>`;
+        btn.onclick = () => setTypeFilter(t);
+        row.appendChild(btn);
+      }
     }
 
-    function setFilter(type) {
+    function setTypeFilter(type) {
       activeFilter = type;
-      // Update active tab
-      document.querySelectorAll('.filter-tab').forEach(btn => {
-        btn.classList.toggle('active', btn.textContent.trim().startsWith(type === 'ALL' ? 'All' : formatType(type)));
+      // Toggle active class
+      document.querySelectorAll('#type-tabs .filter-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
       });
       const filtered = type === 'ALL' ? allEvents : allEvents.filter(e => e.action_type === type);
       renderEvents(filtered);
     }
 
-    // ── Event type helpers ─────────────────────────────────────────────────
+    // ── Event type helpers ──────────────────────────────────────────────────
     function formatType(code) {
       const names = {
         DIVIDEND: 'Dividend',
@@ -271,12 +335,12 @@
       return cls[code] || 'ev-default';
     }
 
-    // ── Build detail string per action type ───────────────────────────────
+    // ── Build detail string per action type ─────────────────────────────────
     function buildDetails(event) {
-      const d = event.details || {};
+      const d         = event.details || {};
       const lastPrice = event.stocks_master?.last_price;
-      const type = event.action_type;
-      const raw = d.raw_purpose || '';
+      const type      = event.action_type;
+      const raw       = d.raw_purpose || '';
 
       if (type === 'DIVIDEND') {
         const amount = d.amount;
@@ -288,21 +352,13 @@
         return raw ? truncate(raw, 60) : '—';
       }
 
-      if (type === 'BONUS') {
-        // Extract ratio like "1:1", "1:2" from raw_purpose
-        const ratioMatch = raw.match(/\d+\s*:\s*\d+/);
-        if (ratioMatch) return `<strong>Ratio: ${ratioMatch[0]}</strong>`;
-        return raw ? truncate(raw, 60) : '—';
-      }
-
-      if (type === 'SPLIT') {
+      if (type === 'BONUS' || type === 'SPLIT') {
         const ratioMatch = raw.match(/\d+\s*:\s*\d+/);
         if (ratioMatch) return `<strong>Ratio: ${ratioMatch[0]}</strong>`;
         return raw ? truncate(raw, 60) : '—';
       }
 
       if (type === 'BUYBACK') {
-        // Extract price like "Rs. 450" from raw_purpose
         const priceMatch = raw.match(/(?:RS\.?\s*|INR\s*|₹\s*)(\d+(?:\.\d+)?)/i);
         if (priceMatch) return `<strong>Price: ₹${priceMatch[1]}</strong>`;
         return raw ? truncate(raw, 60) : '—';
@@ -315,12 +371,15 @@
       return str.length > n ? str.substring(0, n) + '…' : str;
     }
 
-    // ── Render events table ────────────────────────────────────────────────
+    // ── Render events table ─────────────────────────────────────────────────
     function renderEvents(events) {
       const container = document.getElementById('events-container');
 
       if (events.length === 0) {
-        container.innerHTML = '<div class="card no-events">No upcoming events in the next 14 days.</div>';
+        const label = activeDays < 30 ? `${activeDays} days` :
+                      activeDays === 30 ? '1 month' :
+                      activeDays === 60 ? '2 months' : '3 months';
+        container.innerHTML = `<div class="card no-events">No upcoming events in the next ${label}.</div>`;
         return;
       }
 
@@ -349,16 +408,12 @@
       container.innerHTML = html;
     }
 
-    // ── Refresh ────────────────────────────────────────────────────────────
+    // ── Refresh ─────────────────────────────────────────────────────────────
     async function refreshData() {
       const btn = document.getElementById('refresh-btn');
       btn.classList.add('spinning'); btn.disabled = true;
-      try {
-        activeFilter = 'ALL';
-        await loadDashboardData();
-      } finally {
-        btn.classList.remove('spinning'); btn.disabled = false;
-      }
+      try { await loadDashboardData(); }
+      finally { btn.classList.remove('spinning'); btn.disabled = false; }
     }
   </script>
 </body>
