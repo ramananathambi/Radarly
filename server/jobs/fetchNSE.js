@@ -36,7 +36,8 @@ function parseNSEDate(str) {
 
 function extractAmount(purpose) {
   if (!purpose) return null;
-  const m = purpose.match(/(?:RS\.?\s*|INR\s*|₹\s*)(\d+(?:\.\d+)?)/i);
+  // Handles: "Rs 4.25", "Rs. 4.25", "Rs. - 4.25", "Rs.- 4.25", "INR 4.25", "₹4.25"
+  const m = purpose.match(/(?:RS\.?|INR|₹)\s*[-–]?\s*(\d+(?:\.\d+)?)/i);
   return m ? parseFloat(m[1]) : null;
 }
 

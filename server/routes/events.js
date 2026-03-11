@@ -26,17 +26,24 @@ router.get('/upcoming', async (req, res) => {
       [from, to]
     );
 
-    const events = rows.map(r => ({
-      symbol:      r.symbol,
-      action_type: r.action_type,
-      ex_date:     r.ex_date,
-      details:     r.details,
-      stocks_master: {
-        company_name: r.company_name,
-        exchange:     r.exchange,
-        last_price:   r.last_price,
-      },
-    }));
+    const events = rows.map(r => {
+      let details = {};
+      try {
+        details = typeof r.details === 'string' ? JSON.parse(r.details) : (r.details || {});
+      } catch {}
+
+      return {
+        symbol:      r.symbol,
+        action_type: r.action_type,
+        ex_date:     r.ex_date,
+        details,
+        stocks_master: {
+          company_name: r.company_name,
+          exchange:     r.exchange,
+          last_price:   r.last_price,
+        },
+      };
+    });
 
     res.json({ events, from, to, days });
   } catch (err) {

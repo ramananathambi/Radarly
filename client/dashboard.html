@@ -335,6 +335,14 @@
       return cls[code] || 'ev-default';
     }
 
+    // ── Parse amount from raw text (fallback for older DB records) ───────────
+    function extractAmountFromText(text) {
+      if (!text) return null;
+      // Handles: "Rs 4.25", "Rs. 4.25", "Rs. - 4.25", "INR 4.25", "₹4.25"
+      const m = text.match(/(?:RS\.?|INR|₹)\s*[-–]?\s*(\d+(?:\.\d+)?)/i);
+      return m ? parseFloat(m[1]) : null;
+    }
+
     // ── Build detail string per action type ─────────────────────────────────
     function buildDetails(event) {
       const d         = event.details || {};
@@ -343,24 +351,37 @@
       const raw       = d.raw_purpose || '';
 
       if (type === 'DIVIDEND') {
-        const amount = d.amount;
+        // Use stored amount, or parse from raw_purpose as fallback
+        const amount = d.amount || extractAmountFromText(raw);
         if (amount) {
           const yieldPct = lastPrice ? ((amount / lastPrice) * 100).toFixed(2) : null;
           return `<strong>₹${amount}/share</strong>` +
-            (yieldPct ? `<br>Yield: ${yieldPct}%` : '');
+            (yieldPct ? `<br><span style="color:var(--text-secondary);font-size:11px;">Yield: ${yieldPct}%</span>` : '');
         }
         return raw ? truncate(raw, 60) : '—';
       }
 
-      if (type === 'BONUS' || type === 'SPLIT') {
+      if (type === 'BONUS') {
         const ratioMatch = raw.match(/\d+\s*:\s*\d+/);
-        if (ratioMatch) return `<strong>Ratio: ${ratioMatch[0]}</strong>`;
+        if (ratioMatch) return `<strong>${ratioMatch[0]}</strong><br><span style="color:var(--text-secondary);font-size:11px;">Bonus shares</span>`;
+        return raw ? truncate(raw, 60) : '—';
+      }
+
+      if (type === 'SPLIT') {
+        const ratioMatch = raw.match(/\d+\s*:\s*\d+/);
+        if (ratioMatch) return `<strong>${ratioMatch[0]}</strong><br><span style="color:var(--text-secondary);font-size:11px;">Split ratio</span>`;
         return raw ? truncate(raw, 60) : '—';
       }
 
       if (type === 'BUYBACK') {
-        const priceMatch = raw.match(/(?:RS\.?\s*|INR\s*|₹\s*)(\d+(?:\.\d+)?)/i);
-        if (priceMatch) return `<strong>Price: ₹${priceMatch[1]}</strong>`;
+        const amount = extractAmountFromText(raw);
+        if (amount) return `<strong>₹${amount.toLocaleString('en-IN')}</strong><br><span style="color:var(--text-secondary);font-size:11px;">Buyback price</span>`;
+        return raw ? truncate(raw, 60) : '—';
+      }
+
+      if (type === 'RIGHTS') {
+        const ratioMatch = raw.match(/\d+\s*:\s*\d+/);
+        if (ratioMatch) return `<strong>${ratioMatch[0]}</strong><br><span style="color:var(--text-secondary);font-size:11px;">Rights ratio</span>`;
         return raw ? truncate(raw, 60) : '—';
       }
 
