@@ -100,7 +100,19 @@
     /* ── Stat card — black background, red icon ─────── */
     .stat-card-events,
     .stat-card-stocks,
-    .stat-card-today  { background: #f4f4f5; padding: 16px; }
+    .stat-card-today  {
+      background: #ffffff;
+      border: 1.5px solid #111111;
+      padding: 16px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stat-card-events:hover,
+    .stat-card-stocks:hover,
+    .stat-card-today:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+      cursor: pointer;
+    }
     .stat-icon-wrap {
       width: 44px;
       height: 44px;
