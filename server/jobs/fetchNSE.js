@@ -1,6 +1,7 @@
 /**
  * fetchNSE.js
- * Fetches corporate actions from NSE API and upserts into corporate_actions.
+ * Fetches ALL corporate actions from NSE API and upserts into corporate_actions.
+ * Handles: Dividend, Bonus, Split, Buyback, Rights
  *
  * Strategy:
  *   1. Try curl (different TLS/JA3 fingerprint from Node.js — bypasses Akamai)
@@ -39,6 +40,22 @@ function extractAmount(purpose) {
   return m ? parseFloat(m[1]) : null;
 }
 
+/**
+ * Classify a corporate action from its subject/purpose text.
+ * Returns the action_type string or null to skip.
+ */
+function classifyAction(text) {
+  const t = text.toUpperCase();
+  if (t.includes('DIVIDEND'))                                          return 'DIVIDEND';
+  if (t.includes('BONUS'))                                             return 'BONUS';
+  if (t.includes('SPLIT') || t.includes('SUB-DIVISION') ||
+      t.includes('SUBDIVISION') || t.includes('SUB DIVISION'))        return 'SPLIT';
+  if (t.includes('BUYBACK') || t.includes('BUY BACK') ||
+      t.includes('BUY-BACK'))                                          return 'BUYBACK';
+  if (t.includes('RIGHTS'))                                            return 'RIGHTS';
+  return null; // Unknown / not a tracked type — skip
+}
+
 // ─── Browser-like constants ──────────────────────────────────────────────────
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
@@ -72,7 +89,7 @@ async function fetchViaCurl(fromStr, toStr) {
     // Brief human-like pause
     await new Promise(r => setTimeout(r, 2000 + Math.random() * 1500));
 
-    // Step 2: Fetch corporate actions API
+    // Step 2: Fetch ALL corporate actions (no category filter)
     const apiUrl = `https://www.nseindia.com/api/corporates-corporateActions?index=equities&from_date=${fromStr}&to_date=${toStr}`;
 
     console.log('[NSE/curl] Fetching corporate actions API...');
@@ -92,7 +109,6 @@ async function fetchViaCurl(fromStr, toStr) {
       { encoding: 'utf8', timeout: 35000, maxBuffer: 10 * 1024 * 1024 }
     );
 
-    // Debug: log raw response shape
     console.log('[NSE/curl] Raw response (first 500 chars):', raw.substring(0, 500));
 
     let parsed;
@@ -104,10 +120,8 @@ async function fetchViaCurl(fromStr, toStr) {
       throw new Error('NSE returned non-JSON response');
     }
 
-    // Debug: log response keys
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       console.log('[NSE/curl] Response keys:', Object.keys(parsed));
-      // Log the length of each array-valued key
       for (const [k, v] of Object.entries(parsed)) {
         if (Array.isArray(v)) console.log(`[NSE/curl]   ${k}: ${v.length} items`);
         else console.log(`[NSE/curl]   ${k}: ${typeof v}`);
@@ -125,7 +139,6 @@ async function fetchViaCurl(fromStr, toStr) {
     return records;
 
   } finally {
-    // Clean up cookie file
     try { fs.unlinkSync(cookieFile); } catch {}
   }
 }
@@ -159,6 +172,7 @@ async function fetchViaAxios(fromStr, toStr) {
 
   await new Promise(r => setTimeout(r, 2500));
 
+  // No category filter — fetch all corporate actions
   const apiUrl = `https://www.nseindia.com/api/corporates-corporateActions?index=equities&from_date=${fromStr}&to_date=${toStr}`;
 
   const res2 = await axios.get(apiUrl, {
@@ -189,7 +203,7 @@ async function fetchNSE() {
 
   const today  = new Date();
   const toDate = new Date();
-  toDate.setDate(today.getDate() + 30);
+  toDate.setDate(today.getDate() + 90); // 90 days ahead to capture more events
 
   const fromStr = formatNSEDate(today);
   const toStr   = formatNSEDate(toDate);
@@ -212,18 +226,32 @@ async function fetchNSE() {
 
   console.log(`[NSE] Received ${records.length} total records`);
 
-  // Filter dividends
-  const dividends = records.filter(r => {
-    const text = ((r.subject || '') + ' ' + (r.purpose || '')).toUpperCase();
-    return text.includes('DIVIDEND');
-  });
+  // Classify ALL records by action type (not just dividends)
+  const classified = [];
+  let unrecognised = 0;
 
-  console.log(`[NSE] ${dividends.length} dividend records to process`);
+  for (const r of records) {
+    const text = ((r.subject || '') + ' ' + (r.purpose || '')).trim();
+    const actionType = classifyAction(text);
+    if (actionType) {
+      classified.push({ r, actionType });
+    } else {
+      unrecognised++;
+    }
+  }
+
+  // Log breakdown by type
+  const typeCounts = {};
+  for (const { actionType } of classified) {
+    typeCounts[actionType] = (typeCounts[actionType] || 0) + 1;
+  }
+  console.log(`[NSE] Classified ${classified.length} records:`, typeCounts);
+  if (unrecognised > 0) console.log(`[NSE] Skipped ${unrecognised} unrecognised records`);
 
   // Upsert into corporate_actions
   let upserted = 0, skipped = 0;
 
-  for (const r of dividends) {
+  for (const { r, actionType } of classified) {
     const symbol = r.symbol?.trim().toUpperCase();
     if (!symbol) { skipped++; continue; }
 
@@ -242,8 +270,8 @@ async function fetchNSE() {
     const now = new Date();
 
     const details = JSON.stringify({
-      amount:      extractAmount(purpose),
       raw_purpose: purpose,
+      amount:      actionType === 'DIVIDEND' ? extractAmount(purpose) : null,
       face_value:  r.faceVal || null,
       series:      r.series  || null,
       source:      'NSE',
@@ -252,22 +280,22 @@ async function fetchNSE() {
     try {
       await pool.execute(
         `INSERT INTO corporate_actions (symbol, action_type, ex_date, record_date, details, announced_at, last_fetched)
-         VALUES (?, 'DIVIDEND', ?, ?, ?, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
            record_date  = VALUES(record_date),
            details      = VALUES(details),
            announced_at = VALUES(announced_at),
            last_fetched = VALUES(last_fetched)`,
-        [symbol, exDate, parseNSEDate(r.recDate), details, now, now]
+        [symbol, actionType, exDate, parseNSEDate(r.recDate), details, now, now]
       );
       upserted++;
     } catch (err) {
-      console.error(`[NSE] Upsert error for ${symbol}:`, err.message);
+      console.error(`[NSE] Upsert error for ${symbol} (${actionType}):`, err.message);
     }
   }
 
   console.log(`[NSE] Complete — ${upserted} upserted, ${skipped} skipped`);
-  return { upserted, skipped, total: dividends.length };
+  return { upserted, skipped, total: classified.length, typeCounts };
 }
 
 module.exports = { fetchNSE };

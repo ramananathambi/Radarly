@@ -1,6 +1,7 @@
 /**
  * fetchBSE.js
- * Fetches corporate actions (dividends) from BSE API and upserts into corporate_actions.
+ * Fetches ALL corporate actions from BSE API and upserts into corporate_actions.
+ * Handles: Dividend, Bonus, Split, Buyback, Rights
  * Tries multiple BSE API endpoints for reliability.
  */
 const axios  = require('axios');
@@ -13,13 +14,6 @@ function formatBSEDate(date) {
   const mm   = String(date.getMonth() + 1).padStart(2, '0');
   const yyyy = date.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
-}
-
-function formatBSEDateDash(date) {
-  const dd   = String(date.getDate()).padStart(2, '0');
-  const mm   = String(date.getMonth() + 1).padStart(2, '0');
-  const yyyy = date.getFullYear();
-  return `${yyyy}${mm}${dd}`;
 }
 
 function parseBSEDate(str) {
@@ -61,6 +55,22 @@ function extractAmount(purpose) {
   return m ? parseFloat(m[1]) : null;
 }
 
+/**
+ * Classify a corporate action from its purpose/remarks text.
+ * Returns the action_type string or null to skip.
+ */
+function classifyAction(text) {
+  const t = text.toUpperCase();
+  if (t.includes('DIVIDEND'))                                          return 'DIVIDEND';
+  if (t.includes('BONUS'))                                             return 'BONUS';
+  if (t.includes('SPLIT') || t.includes('SUB-DIVISION') ||
+      t.includes('SUBDIVISION') || t.includes('SUB DIVISION'))        return 'SPLIT';
+  if (t.includes('BUYBACK') || t.includes('BUY BACK') ||
+      t.includes('BUY-BACK'))                                          return 'BUYBACK';
+  if (t.includes('RIGHTS'))                                            return 'RIGHTS';
+  return null; // Unknown / not a tracked type — skip
+}
+
 // ─── BSE request headers ─────────────────────────────────────────────────────
 
 const BSE_HEADERS = {
@@ -76,25 +86,26 @@ const BSE_HEADERS = {
 // ─── Try multiple BSE API endpoints ──────────────────────────────────────────
 
 async function fetchBSERecords(fromStr, toStr) {
-  // Endpoint 1: DefaultData endpoint (original)
-  const url1 = `https://api.bseindia.com/BseIndiaAPI/api/DefaultData/w?Atea=&Category=&Ession=&ExDate=${fromStr}&FDate=&Ession=&TDate=&Ession=&an_session=&pageno=1&strCat=Dividend&strPrevDate=${fromStr}&strScrip=&strSearch=P&strToDate=${toStr}&strType=C`;
+  // All endpoints now have NO category filter — fetch all corporate action types
 
-  // Endpoint 2: CorporateAction endpoint
-  const url2 = `https://api.bseindia.com/BseIndiaAPI/api/CorporateAction/w?scripcode=&index=&sector=&fromdate=${fromStr}&todate=${toStr}&category=Dividend`;
+  // Endpoint 1: DefaultData — all categories (strCat empty)
+  const url1 = `https://api.bseindia.com/BseIndiaAPI/api/DefaultData/w?Atea=&Category=&Ession=&ExDate=${fromStr}&FDate=&Ession=&TDate=&Ession=&an_session=&pageno=1&strCat=&strPrevDate=${fromStr}&strScrip=&strSearch=P&strToDate=${toStr}&strType=C`;
 
-  // Endpoint 3: Original DefaultData (simpler params)
-  const url3 = `https://api.bseindia.com/BseIndiaAPI/api/DefaultData/w?Category=CA&pageno=1&subcategory=Dividend&scripcode=&strdate=${fromStr}&todate=${toStr}`;
+  // Endpoint 2: CorporateAction — all categories (no category param)
+  const url2 = `https://api.bseindia.com/BseIndiaAPI/api/CorporateAction/w?scripcode=&index=&sector=&fromdate=${fromStr}&todate=${toStr}`;
+
+  // Endpoint 3: DefaultData v1 — all categories (subcategory empty)
+  const url3 = `https://api.bseindia.com/BseIndiaAPI/api/DefaultData/w?Category=CA&pageno=1&subcategory=&scripcode=&strdate=${fromStr}&todate=${toStr}`;
 
   const endpoints = [
-    { name: 'BSE DefaultData v2', url: url1, parser: 'table' },
-    { name: 'BSE CorporateAction', url: url2, parser: 'direct' },
-    { name: 'BSE DefaultData v1', url: url3, parser: 'table' },
+    { name: 'BSE DefaultData v2 (all)',    url: url1, parser: 'table' },
+    { name: 'BSE CorporateAction (all)',   url: url2, parser: 'direct' },
+    { name: 'BSE DefaultData v1 (all)',    url: url3, parser: 'table' },
   ];
 
   for (const ep of endpoints) {
     try {
       console.log(`[BSE] Trying ${ep.name}...`);
-      console.log(`[BSE] URL: ${ep.url}`);
       const res = await axios.get(ep.url, {
         headers: BSE_HEADERS,
         timeout: 30000,
@@ -109,7 +120,6 @@ async function fetchBSERecords(fromStr, toStr) {
       }
 
       let records;
-      // BSE sometimes returns a direct array, sometimes wrapped in {Table: [...]}
       if (Array.isArray(res.data)) {
         records = res.data;
       } else if (ep.parser === 'table') {
@@ -133,7 +143,6 @@ async function fetchBSERecords(fromStr, toStr) {
     }
   }
 
-  // All endpoints returned empty or failed
   return { records: [], source: 'none' };
 }
 
@@ -144,7 +153,7 @@ async function fetchBSE() {
 
   const today  = new Date();
   const toDate = new Date();
-  toDate.setDate(today.getDate() + 60);  // Look 60 days ahead for more results
+  toDate.setDate(today.getDate() + 90); // 90 days ahead for more events
 
   const fromStr = formatBSEDate(today);
   const toStr   = formatBSEDate(toDate);
@@ -152,16 +161,17 @@ async function fetchBSE() {
   const { records, source } = await fetchBSERecords(fromStr, toStr);
 
   if (records.length === 0) {
-    console.log('[BSE] No dividend records found from any endpoint');
+    console.log('[BSE] No records found from any endpoint');
     return { upserted: 0, skipped: 0, total: 0 };
   }
 
   console.log(`[BSE] Processing ${records.length} records from ${source}`);
 
-  let upserted = 0, skipped = 0;
+  let upserted = 0, skipped = 0, unrecognised = 0;
+  const typeCounts = {};
 
   for (const r of records) {
-    // BSE field names vary: short_name, SHORT_NAME, ShortName etc.
+    // BSE field names vary across endpoints
     const symbol = (
       r.short_name || r.SHORT_NAME || r.ShortName ||
       r.TRADING_SYMBOL || r.TradingSymbol || ''
@@ -175,7 +185,12 @@ async function fetchBSE() {
     if (!exDate) { skipped++; continue; }
 
     const purpose = r.Purpose || r.PURPOSE || r.purpose || r.REMARKS || r.Remarks || '';
-    if (!purpose.toUpperCase().includes('DIVIDEND')) { skipped++; continue; }
+
+    // Classify the action type — skip unrecognised types
+    const actionType = classifyAction(purpose);
+    if (!actionType) { unrecognised++; continue; }
+
+    typeCounts[actionType] = (typeCounts[actionType] || 0) + 1;
 
     // Only upsert if symbol exists in stocks_master
     const [stockRows] = await pool.execute(
@@ -185,7 +200,6 @@ async function fetchBSE() {
 
     if (stockRows.length === 0) {
       skipped++;
-      // Log first few skipped symbols for debugging
       if (skipped <= 5) console.log(`[BSE] Skipped ${symbol} — not in stocks_master`);
       continue;
     }
@@ -193,8 +207,8 @@ async function fetchBSE() {
     const now = new Date();
 
     const details = JSON.stringify({
-      amount:      extractAmount(purpose),
       raw_purpose: purpose,
+      amount:      actionType === 'DIVIDEND' ? extractAmount(purpose) : null,
       scrip_code:  r.scrip_code || r.SCRIP_CD || r.ScripCode || null,
       source:      'BSE',
     });
@@ -205,22 +219,23 @@ async function fetchBSE() {
     try {
       await pool.execute(
         `INSERT INTO corporate_actions (symbol, action_type, ex_date, record_date, details, announced_at, last_fetched)
-         VALUES (?, 'DIVIDEND', ?, ?, ?, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
            record_date  = VALUES(record_date),
            details      = VALUES(details),
            announced_at = VALUES(announced_at),
            last_fetched = VALUES(last_fetched)`,
-        [symbol, exDate, recordDate, details, now, now]
+        [symbol, actionType, exDate, recordDate, details, now, now]
       );
       upserted++;
     } catch (err) {
-      console.error(`[BSE] Upsert error for ${symbol}:`, err.message);
+      console.error(`[BSE] Upsert error for ${symbol} (${actionType}):`, err.message);
     }
   }
 
-  console.log(`[BSE] Complete — ${upserted} upserted, ${skipped} skipped`);
-  return { upserted, skipped, total: records.length };
+  console.log(`[BSE] Classified:`, typeCounts);
+  console.log(`[BSE] Complete — ${upserted} upserted, ${skipped} skipped, ${unrecognised} unrecognised`);
+  return { upserted, skipped, total: records.length, typeCounts };
 }
 
 module.exports = { fetchBSE };
