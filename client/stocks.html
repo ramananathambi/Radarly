@@ -260,8 +260,8 @@
           : '<span class="no-price">—</span>';
 
         html += `<tr class="stock-row">`;
-        html += `<td><strong>${s.symbol}</strong></td>`;
-        html += `<td>${s.company_name || '—'}</td>`;
+        html += `<td style="text-align:left;"><strong>${s.symbol}</strong></td>`;
+        html += `<td style="text-align:left;">${s.company_name || '—'}</td>`;
         html += `<td class="price-cell" style="text-align:right;">${priceDisplay}</td>`;
         html += `<td><span class="badge ${badgeClass}">${badge}</span></td>`;
         html += `<td>${s.sector || '—'}</td>`;

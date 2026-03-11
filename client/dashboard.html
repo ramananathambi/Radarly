@@ -512,8 +512,8 @@
 
         html += `<tr>
           <td><span class="event-badge ${typeClass}">${formatType(ev.action_type)}</span></td>
-          <td><strong>${ev.symbol}</strong></td>
-          <td style="font-size:13px;">${co}</td>
+          <td style="text-align:left;"><strong>${ev.symbol}</strong></td>
+          <td style="font-size:13px;text-align:left;">${co}</td>
           <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${formatDate(ev.ex_date)}</td>
           <td class="ev-details">${details}</td>
           <td><span class="badge ${badgeCls}">${exchange}</span></td>
