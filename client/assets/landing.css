@@ -257,7 +257,7 @@
   line-height: 1.6;
 }
 .lp-step-arrow {
-  color: var(--border);
+  color: #999999;
   padding-top: 12px;
   flex-shrink: 0;
 }
