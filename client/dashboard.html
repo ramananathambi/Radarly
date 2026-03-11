@@ -223,6 +223,7 @@
     <!-- Upcoming Events section -->
     <div class="section-header">
       <h2>Upcoming Events</h2>
+      <button class="refresh-btn" onclick="refreshData()" title="Refresh" id="refresh-btn" style="color:var(--accent);border-color:var(--accent);"><span class="refresh-icon">&#x21bb;</span></button>
     </div>
 
     <!-- Filters -->
@@ -265,7 +266,7 @@
 
       // Greeting
       const greetEl = document.getElementById('greeting');
-      greetEl.innerHTML = `Hi ${user.name || 'there'}! <button class="refresh-btn" onclick="refreshData()" title="Refresh" id="refresh-btn"><span class="refresh-icon">&#x21bb;</span></button>`;
+      greetEl.textContent = `Hi ${user.name || 'there'}!`;
 
       // Phone nudge
       if (!user.phone) {
