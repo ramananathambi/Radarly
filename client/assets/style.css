@@ -110,7 +110,7 @@ a:hover { text-decoration: underline; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
-th { font-weight: 600; color: var(--text-secondary); background: var(--bg); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+th { font-weight: 700; color: var(--text); background: var(--bg); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
 tr:hover td { background: #f3f4f6; }
 
 /* Badges */
