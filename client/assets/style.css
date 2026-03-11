@@ -230,9 +230,10 @@ th.sortable.desc::after { border-top-color: var(--accent); opacity: 1; }
   text-align: center;
   padding: 32px 16px;
   margin-top: 48px;
-  color: var(--text-secondary);
+  background: #111111;
+  color: rgba(255,255,255,0.5);
   font-size: 13px;
-  border-top: 1px solid var(--border);
+  border-top: none;
 }
 
 /* Mobile hamburger toggle — hidden on desktop, injected by app.js */
