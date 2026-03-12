@@ -144,6 +144,7 @@
     }
     #password-group.visible {
       max-height: 120px;
+      overflow: visible;
       opacity: 1;
       margin-bottom: 16px;
       pointer-events: auto;
@@ -385,6 +386,7 @@
     // ─── Unified Email / Phone Auth ────────────────────────────────────
     let inputMode = 'unknown'; // 'email', 'phone', 'unknown'
     let isRegisterMode = false;
+    let passwordAutoFocused = false;
 
     const identityInput = document.getElementById('identity-input');
     const passwordGroup = document.getElementById('password-group');
@@ -428,7 +430,10 @@
         document.getElementById('password-input').setAttribute('required', '');
         toggleRow.style.display = 'block';
         submitBtn.textContent = isRegisterMode ? 'Create Account' : 'Sign In';
-        if (firstTime && !isMobile && isEmail(val)) document.getElementById('password-input').focus();
+        if (!passwordAutoFocused && !isMobile && isEmail(val)) {
+          document.getElementById('password-input').focus();
+          passwordAutoFocused = true;
+        }
       } else {
         passwordGroup.classList.remove('visible');
         document.getElementById('password-input').removeAttribute('required');
@@ -437,6 +442,7 @@
         submitBtn.textContent = inputMode === 'phone' ? 'Send OTP' : 'Continue';
         if (prevMode === 'email' && inputMode !== 'email') {
           isRegisterMode = false;
+          passwordAutoFocused = false;
         }
       }
     });
