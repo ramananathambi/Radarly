@@ -96,6 +96,13 @@
     #toggle-row a#toggle-mode-link { color: var(--accent); }
     #forgot-flow { color: rgba(255,255,255,0.55); }
 
+    /* ── Autofill detection (Touch ID / password manager) ── */
+    @keyframes autofill-detect { from {} to {} }
+    .form-group input:-webkit-autofill {
+      animation-name: autofill-detect;
+      animation-duration: 0.001ms;
+    }
+
     /* ── Floating labels ─────────────────────────────────── */
     .float-label { position: relative; text-align: left !important; }
     .float-label input {
@@ -185,7 +192,7 @@
           <label for="identity-input">Email or Phone</label>
         </div>
         <div class="form-group float-label" id="password-group" style="display:none;">
-          <input type="password" id="password-input" placeholder=" " minlength="8" />
+          <input type="password" id="password-input" placeholder=" " minlength="8" autocomplete="current-password" />
           <label for="password-input">Password</label>
         </div>
         <button type="submit" class="btn btn-primary" style="width:100%;" id="submit-btn">Continue</button>
@@ -412,6 +419,25 @@
           isRegisterMode = false;
         }
       }
+    });
+
+    // ── Autofill detection (Touch ID / password manager) ─────────────────
+    // CSS animation trick: :-webkit-autofill fires animationstart → we dispatch
+    // a synthetic 'input' event so the password group becomes visible,
+    // then auto-submit once both fields are filled.
+    identityInput.addEventListener('animationstart', (e) => {
+      if (e.animationName !== 'autofill-detect') return;
+      identityInput.dispatchEvent(new Event('input'));
+    });
+
+    document.getElementById('password-input').addEventListener('animationstart', (e) => {
+      if (e.animationName !== 'autofill-detect') return;
+      // Make sure email detection has run first (password group visible)
+      identityInput.dispatchEvent(new Event('input'));
+      // Brief delay so both fills settle, then auto-submit
+      setTimeout(() => {
+        if (passwordGroup.style.display !== 'none') authForm.requestSubmit();
+      }, 80);
     });
 
     function toggleAuthMode(e) {
