@@ -410,7 +410,7 @@
         document.getElementById('password-input').setAttribute('required', '');
         toggleRow.style.display = 'block';
         submitBtn.textContent = isRegisterMode ? 'Create Account' : 'Sign In';
-        if (firstTime) document.getElementById('password-input').focus();
+        if (firstTime && !navigator.maxTouchPoints) document.getElementById('password-input').focus();
       } else {
         passwordGroup.style.display = 'none';
         document.getElementById('password-input').removeAttribute('required');
