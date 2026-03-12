@@ -132,6 +132,22 @@
       background: #111111;
     }
 
+    /* ── Password group — CSS hide so autofill can discover it ── */
+    #password-group {
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      margin-bottom: 0 !important;
+      pointer-events: none;
+      transition: max-height 0.22s ease, opacity 0.18s ease, margin-bottom 0.22s ease;
+    }
+    #password-group.visible {
+      max-height: 120px;
+      opacity: 1;
+      margin-bottom: 16px;
+      pointer-events: auto;
+    }
+
     /* ── Card shake on error ─────────────────────────────── */
     @keyframes card-shake {
       0%, 100% { transform: translateX(0); }
@@ -191,7 +207,7 @@
           <input type="text" id="identity-input" placeholder=" " required autocomplete="username" />
           <label for="identity-input">Email or Phone</label>
         </div>
-        <div class="form-group float-label" id="password-group" style="display:none;">
+        <div class="form-group float-label" id="password-group">
           <input type="password" id="password-input" placeholder=" " minlength="8" autocomplete="current-password" />
           <label for="password-input">Password</label>
         </div>
@@ -404,15 +420,16 @@
       }
 
       // Show/hide password field based on mode
+      const isMobile = navigator.maxTouchPoints > 0 || 'ontouchstart' in window || window.matchMedia('(pointer:coarse)').matches;
       if (inputMode === 'email') {
         const firstTime = prevMode !== 'email';
-        passwordGroup.style.display = 'block';
+        passwordGroup.classList.add('visible');
         document.getElementById('password-input').setAttribute('required', '');
         toggleRow.style.display = 'block';
         submitBtn.textContent = isRegisterMode ? 'Create Account' : 'Sign In';
-        if (firstTime && !navigator.maxTouchPoints) document.getElementById('password-input').focus();
+        if (firstTime && !isMobile) document.getElementById('password-input').focus();
       } else {
-        passwordGroup.style.display = 'none';
+        passwordGroup.classList.remove('visible');
         document.getElementById('password-input').removeAttribute('required');
         toggleRow.style.display = 'none';
         nameGroup.style.display = 'none';
@@ -438,7 +455,7 @@
       identityInput.dispatchEvent(new Event('input'));
       // Brief delay so both fills settle, then auto-submit
       setTimeout(() => {
-        if (passwordGroup.style.display !== 'none') authForm.requestSubmit();
+        if (passwordGroup.classList.contains('visible')) authForm.requestSubmit();
       }, 80);
     });
 
