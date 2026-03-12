@@ -471,8 +471,8 @@
     // ── Parse amount from raw text (fallback for older DB records) ───────────
     function extractAmountFromText(text) {
       if (!text) return null;
-      // Handles: "Rs 4.25", "Rs. 4.25", "Rs. - 4.25", "INR 4.25", "₹4.25"
-      const m = text.match(/(?:RS\.?|INR|₹)\s*[-–]?\s*(\d+(?:\.\d+)?)/i);
+      // Handles: "Rs 4.25", "Rs. 4.25", "Rs. - 4.25", "INR 4.25", "₹4.25", "Re 1", "Re. 1"
+      const m = text.match(/(?:RS\.?|RE\.?|INR|₹)\s*[-–]?\s*(\d+(?:\.\d+)?)/i);
       return m ? parseFloat(m[1]) : null;
     }
 
@@ -496,7 +496,7 @@
 
       if (type === 'BONUS') {
         const ratioMatch = raw.match(/\d+\s*:\s*\d+/);
-        if (ratioMatch) return `<strong>${ratioMatch[0]}</strong><br><span style="color:var(--text-secondary);font-size:11px;">Bonus shares</span>`;
+        if (ratioMatch) return `<strong>${ratioMatch[0]}</strong><br><span style="color:var(--text-secondary);font-size:11px;">Bonus Shares</span>`;
         return raw ? truncate(raw, 60) : '—';
       }
 
