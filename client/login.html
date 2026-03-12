@@ -405,10 +405,12 @@
 
       // Show/hide password field based on mode
       if (inputMode === 'email') {
+        const firstTime = prevMode !== 'email';
         passwordGroup.style.display = 'block';
         document.getElementById('password-input').setAttribute('required', '');
         toggleRow.style.display = 'block';
         submitBtn.textContent = isRegisterMode ? 'Create Account' : 'Sign In';
+        if (firstTime) document.getElementById('password-input').focus();
       } else {
         passwordGroup.style.display = 'none';
         document.getElementById('password-input').removeAttribute('required');
