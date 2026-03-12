@@ -488,7 +488,7 @@
         const amount = d.amount || extractAmountFromText(raw);
         if (amount) {
           const yieldPct = lastPrice ? ((amount / lastPrice) * 100).toFixed(2) : null;
-          return `<strong>₹${amount}/share</strong>` +
+          return `<strong>₹${amount}/Share</strong>` +
             (yieldPct ? `<br><span style="color:var(--text-secondary);font-size:11px;">Yield: ${yieldPct}%</span>` : '');
         }
         return raw ? truncate(raw, 60) : '—';
