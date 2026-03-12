@@ -261,14 +261,14 @@
       const bubble = document.getElementById('hero-bubble');
       if (!typing || !bubble) return;
       setTimeout(() => {
-        typing.style.transition = 'opacity 0.25s';
+        typing.style.transition = 'opacity 0.2s';
         typing.style.opacity = '0';
         setTimeout(() => {
           typing.style.display = 'none';
           bubble.style.display = 'block';
           bubble.classList.add('bubble-appear');
-        }, 280);
-      }, 1700);
+        }, 200);
+      }, 600);
     })();
 
     // ── Parallax on hero phone ──────────────────────────────────────────────
