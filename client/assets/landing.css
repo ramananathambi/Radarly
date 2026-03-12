@@ -387,7 +387,7 @@
 }
 .lp-hero-text h1       { animation: hero-in 0.75s ease forwards; }
 .lp-hero-text p        { animation: hero-in 0.75s 0.15s ease forwards; opacity: 0; }
-.lp-hero-text .lp-cta  { animation: hero-in 0.75s 0.28s ease backwards, glow-pulse 2.4s 1.2s ease-in-out infinite; }
+.lp-hero-text .lp-cta  { animation: hero-in 0.75s 0.28s ease backwards; }
 .lp-hero-text .lp-hero-note { animation: hero-in 0.75s 0.38s ease forwards; opacity: 0; }
 .lp-hero-visual        { animation: hero-in 0.85s 0.2s ease forwards; opacity: 0; }
 
@@ -436,14 +436,6 @@
   transform: translateY(-7px);
 }
 
-/* 6. CTA button glow pulse */
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 4px 18px rgba(233,50,68,0.25); }
-  50%       { box-shadow: 0 4px 32px rgba(233,50,68,0.55); }
-}
-.lp-cta {
-  animation: glow-pulse 2.4s ease-in-out infinite;
-}
 
 /* 7. WhatsApp typing indicator */
 .wa-typing {
