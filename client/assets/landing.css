@@ -433,6 +433,46 @@
   transform: translateY(-7px);
 }
 
+/* 6. CTA button glow pulse */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 4px 18px rgba(233,50,68,0.25); }
+  50%       { box-shadow: 0 4px 32px rgba(233,50,68,0.55); }
+}
+.lp-cta {
+  animation: glow-pulse 2.4s ease-in-out infinite;
+}
+
+/* 7. WhatsApp typing indicator */
+.wa-typing {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  background: #fff;
+  border-radius: 0 10px 10px 10px;
+  padding: 9px 13px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  align-self: flex-start;
+}
+.wa-typing span {
+  width: 7px; height: 7px;
+  background: #bbb;
+  border-radius: 50%;
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+.wa-typing span:nth-child(2) { animation-delay: 0.18s; }
+.wa-typing span:nth-child(3) { animation-delay: 0.36s; }
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0);    opacity: 0.45; }
+  30%            { transform: translateY(-6px); opacity: 1; }
+}
+
+/* 8. Bubble appear animation */
+@keyframes bubble-appear {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+.bubble-appear { animation: bubble-appear 0.38s ease forwards; }
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .lp-hero {

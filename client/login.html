@@ -95,6 +95,21 @@
     #toggle-row, #toggle-row a { color: rgba(255,255,255,0.45); }
     #toggle-row a#toggle-mode-link { color: var(--accent); }
     #forgot-flow { color: rgba(255,255,255,0.55); }
+
+    /* ── Card shake on error ─────────────────────────────── */
+    @keyframes card-shake {
+      0%, 100% { transform: translateX(0); }
+      18%, 54% { transform: translateX(-9px); }
+      36%, 72% { transform: translateX(9px); }
+    }
+    .card.shake { animation: card-shake 0.42s ease; }
+
+    /* ── Submit button success state ─────────────────────── */
+    .btn-success-state {
+      background: var(--success) !important;
+      pointer-events: none;
+      transition: background 0.2s;
+    }
   </style>
 </head>
 <body>
@@ -214,6 +229,22 @@
   <script>
     // If already logged in, redirect
     getMe().then(u => { if (u) window.location.href = '/dashboard.html'; });
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+    function shakeCard() {
+      const card = document.querySelector('.card');
+      if (!card) return;
+      card.classList.remove('shake');
+      void card.offsetWidth; // force reflow to restart animation
+      card.classList.add('shake');
+      setTimeout(() => card.classList.remove('shake'), 440);
+    }
+
+    function showSuccess(btn, dest) {
+      btn.innerHTML = '✓ Done';
+      btn.classList.add('btn-success-state');
+      setTimeout(() => { window.location.href = dest; }, 750);
+    }
 
     // ─── Google Sign-In ───────────────────────────────────────────────
     let googleInitialized = false;
@@ -390,10 +421,11 @@
           const body = isRegisterMode ? { name, email: val, password } : { email: val, password };
           const data = await api('POST', endpoint, body);
           setToken(data.session_token);
-          window.location.href = data.needsOnboarding ? '/onboarding.html' : '/dashboard.html';
+          const dest = data.needsOnboarding ? '/onboarding.html' : '/dashboard.html';
+          showSuccess(btn, dest);
         } catch (err) {
           showAlert('alert-box', err.message, 'error');
-        } finally {
+          shakeCard();
           setLoading(btn, false);
         }
 
@@ -412,6 +444,7 @@
           window.location.href = '/verify.html';
         } catch (err) {
           showAlert('alert-box', err.message, 'error');
+          shakeCard();
         } finally {
           setLoading(btn, false);
         }

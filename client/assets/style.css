@@ -20,12 +20,25 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Custom scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* ── Page fade-in ────────────────────────────────────────────────── */
+@keyframes page-fadein {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 body {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
   letter-spacing: -0.01em;
+  animation: page-fadein 0.28s ease forwards;
 }
 
 a { color: var(--accent); text-decoration: none; }
@@ -80,7 +93,8 @@ a:hover { text-decoration: underline; }
   transition: all 0.2s ease;
   letter-spacing: -0.01em;
 }
-.btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+.btn:hover  { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+.btn:active { transform: scale(0.97) translateY(0) !important; box-shadow: none !important; transition: transform 0.08s, box-shadow 0.08s; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }

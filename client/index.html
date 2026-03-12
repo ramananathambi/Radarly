@@ -37,7 +37,10 @@
               </div>
             </div>
             <div class="wa-chat">
-              <div class="wa-bubble wa-bubble-full">
+              <div class="wa-typing" id="hero-typing">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="wa-bubble wa-bubble-full" id="hero-bubble" style="display:none;">
                 <div class="wa-msg-label">Dividend Alert</div>
                 <div class="wa-msg-text">
                   <div class="wa-stock-block">
@@ -62,6 +65,7 @@
       </div>
     </div>
   </section>
+
 
   <!-- Section 2: How It Works -->
   <section class="lp-section lp-steps-section scroll-fade">
@@ -249,6 +253,31 @@
     (async () => {
       const user = await getMe();
       if (user) window.location.href = '/dashboard.html';
+    })();
+
+    // ── Phone mockup bubble animation ──────────────────────────────────────
+    (function() {
+      const typing = document.getElementById('hero-typing');
+      const bubble = document.getElementById('hero-bubble');
+      if (!typing || !bubble) return;
+      setTimeout(() => {
+        typing.style.transition = 'opacity 0.25s';
+        typing.style.opacity = '0';
+        setTimeout(() => {
+          typing.style.display = 'none';
+          bubble.style.display = 'block';
+          bubble.classList.add('bubble-appear');
+        }, 280);
+      }, 1700);
+    })();
+
+    // ── Parallax on hero phone ──────────────────────────────────────────────
+    (function() {
+      const visual = document.querySelector('.lp-hero-visual');
+      if (!visual) return;
+      window.addEventListener('scroll', () => {
+        visual.style.transform = `translateY(${window.scrollY * 0.1}px)`;
+      }, { passive: true });
     })();
 
     // Word cycling in hero

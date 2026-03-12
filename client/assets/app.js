@@ -72,6 +72,40 @@ function setLoading(btnEl, loading) {
   }
 }
 
+// ─── Toast notification ───────────────────────────────────────────────────────
+
+function showToast(message, type = 'success') {
+  const existing = document.getElementById('radarly-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'radarly-toast';
+  const bg = type === 'error' ? 'var(--danger)' : '#111111';
+  toast.style.cssText = `
+    position:fixed; bottom:28px; left:50%;
+    transform:translateX(-50%) translateY(16px);
+    background:${bg}; color:#fff;
+    padding:10px 22px; border-radius:24px;
+    font-size:13px; font-weight:600; letter-spacing:-0.01em;
+    box-shadow:0 4px 20px rgba(0,0,0,0.22);
+    z-index:9999; opacity:0; pointer-events:none; white-space:nowrap;
+    transition:opacity 0.22s ease, transform 0.22s ease;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  }));
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(10px)';
+    setTimeout(() => toast.remove(), 250);
+  }, 2600);
+}
+
 // ─── Nav helper (update Login/Logout link) ───────────────────────────────────
 
 function setupNav(activePage) {

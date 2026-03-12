@@ -63,6 +63,34 @@
       color: var(--text-secondary);
       border: 1px solid var(--border);
     }
+
+    /* ── Toggle ripple ───────────────────────────────────── */
+    .toggle-ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(233,50,68,0.18);
+      width: 44px; height: 44px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      animation: toggle-ripple-out 0.45s ease forwards;
+      pointer-events: none;
+    }
+    @keyframes toggle-ripple-out {
+      to { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+    }
+
+    /* ── Animated save checkmark ─────────────────────────── */
+    @keyframes check-draw {
+      from { stroke-dashoffset: 30; opacity: 0; }
+      to   { stroke-dashoffset: 0;  opacity: 1; }
+    }
+    .check-svg {
+      stroke-dasharray: 30;
+      stroke-dashoffset: 30;
+      animation: check-draw 0.3s ease 0.05s forwards;
+      vertical-align: middle;
+      margin-right: 2px;
+    }
   </style>
 </head>
 <body>
@@ -224,14 +252,27 @@
           is_enabled: isEnabled,
           scope: scope,
         });
-        statusEl.textContent = 'Saved';
+        statusEl.innerHTML = `<svg class="check-svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="var(--success)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/></svg> Saved`;
         statusEl.style.color = 'var(--success)';
-        setTimeout(() => { statusEl.textContent = ''; }, 2000);
+        setTimeout(() => { statusEl.innerHTML = ''; }, 2200);
       } catch (err) {
         statusEl.textContent = `Error: ${err.message}`;
         statusEl.style.color = 'var(--danger)';
       }
     }
+
+    // ── Toggle ripple (delegated) ─────────────────────────────────────────
+    document.addEventListener('click', (e) => {
+      const label = e.target.closest('.toggle');
+      if (!label) return;
+      const ripple = document.createElement('span');
+      ripple.className = 'toggle-ripple';
+      label.style.position = 'relative';
+      label.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 460);
+    });
   </script>
 </body>
 </html>
