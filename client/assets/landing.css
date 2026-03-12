@@ -387,7 +387,7 @@
 }
 .lp-hero-text h1       { animation: hero-in 0.75s ease forwards; }
 .lp-hero-text p        { animation: hero-in 0.75s 0.15s ease forwards; opacity: 0; }
-.lp-hero-text .lp-cta  { animation: hero-in 0.75s 0.28s ease forwards; opacity: 0; }
+.lp-hero-text .lp-cta  { animation: hero-in 0.75s 0.28s ease backwards, glow-pulse 2.4s 1.2s ease-in-out infinite; }
 .lp-hero-text .lp-hero-note { animation: hero-in 0.75s 0.38s ease forwards; opacity: 0; }
 .lp-hero-visual        { animation: hero-in 0.85s 0.2s ease forwards; opacity: 0; }
 
