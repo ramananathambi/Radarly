@@ -37,10 +37,7 @@
               </div>
             </div>
             <div class="wa-chat">
-              <div class="wa-typing" id="hero-typing">
-                <span></span><span></span><span></span>
-              </div>
-              <div class="wa-bubble wa-bubble-full" id="hero-bubble" style="display:none;">
+              <div class="wa-bubble wa-bubble-full" id="hero-bubble">
                 <div class="wa-msg-label">Dividend Alert</div>
                 <div class="wa-msg-text">
                   <div class="wa-stock-block">
@@ -253,22 +250,6 @@
     (async () => {
       const user = await getMe();
       if (user) window.location.href = '/dashboard.html';
-    })();
-
-    // ── Phone mockup bubble animation ──────────────────────────────────────
-    (function() {
-      const typing = document.getElementById('hero-typing');
-      const bubble = document.getElementById('hero-bubble');
-      if (!typing || !bubble) return;
-      setTimeout(() => {
-        typing.style.transition = 'opacity 0.2s';
-        typing.style.opacity = '0';
-        setTimeout(() => {
-          typing.style.display = 'none';
-          bubble.style.display = 'block';
-          bubble.classList.add('bubble-appear');
-        }, 200);
-      }, 600);
     })();
 
     // ── Parallax on hero phone ──────────────────────────────────────────────
