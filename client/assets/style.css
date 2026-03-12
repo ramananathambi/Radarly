@@ -237,7 +237,7 @@ th.sortable.desc::after { border-top-color: var(--accent); opacity: 1; }
 .site-footer {
   text-align: center;
   padding: 32px 16px;
-  margin-top: 48px;
+  margin-top: 0;
   background: #111111;
   color: #ffffff;
   font-size: 13px;
