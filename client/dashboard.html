@@ -160,6 +160,47 @@
       color: var(--text-secondary);
       font-size: 14px;
     }
+
+    /* ── Entrance animation ──────────────────────────────── */
+    @keyframes dash-in {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .page-title        { animation: dash-in 0.55s ease forwards; }
+    .stat-card-events  { animation: dash-in 0.5s 0.10s ease forwards; opacity: 0; }
+    .stat-card-stocks  { animation: dash-in 0.5s 0.20s ease forwards; opacity: 0; }
+    .stat-card-today   { animation: dash-in 0.5s 0.30s ease forwards; opacity: 0; }
+    .section-header    { animation: dash-in 0.5s 0.38s ease forwards; opacity: 0; }
+    .filters-wrap      { animation: dash-in 0.5s 0.44s ease forwards; opacity: 0; }
+    #events-container  { animation: dash-in 0.5s 0.50s ease forwards; opacity: 0; }
+
+    /* ── Stat icon pulse on load ─────────────────────────── */
+    @keyframes icon-pulse {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.14); }
+      100% { transform: scale(1); }
+    }
+    .stat-icon-wrap { animation: icon-pulse 0.55s 0.55s ease both; }
+
+    /* ── Refresh button spin ─────────────────────────────── */
+    @keyframes spin-once {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    #refresh-btn.spinning .refresh-icon {
+      display: inline-block;
+      animation: spin-once 0.65s ease;
+    }
+
+    /* ── Table row entrance ──────────────────────────────── */
+    @keyframes row-in {
+      from { opacity: 0; transform: translateX(-6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .events-row-anim {
+      animation: row-in 0.3s ease forwards;
+      opacity: 0;
+    }
   </style>
 </head>
 <body>
@@ -253,6 +294,21 @@
 
   <script src="/assets/app.js"></script>
   <script>
+    // ── Count-up animation ──────────────────────────────────────────────────
+    function countUp(el, target, duration = 850, format = null) {
+      if (typeof target !== 'number' || isNaN(target)) { el.textContent = target; return; }
+      const start = performance.now();
+      const step = (now) => {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased    = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        const current  = Math.round(eased * target);
+        el.textContent = format ? format(current) : current;
+        if (progress < 1) requestAnimationFrame(step);
+        else el.textContent = format ? format(target) : target;
+      };
+      requestAnimationFrame(step);
+    }
+
     // ── State ───────────────────────────────────────────────────────────────
     let allEvents    = [];
     let activeFilter = 'ALL';
@@ -296,22 +352,25 @@
       ]);
 
       // Stock count
-      document.getElementById('stock-count').textContent = stocksRes.stocks.length;
+      countUp(document.getElementById('stock-count'), stocksRes.stocks.length);
 
       // Store events
       allEvents    = eventsRes.events || [];
       activeFilter = 'ALL';  // Reset type filter on every data reload
 
       // Update summary card
-      document.getElementById('event-count').textContent = allEvents.length;
+      countUp(document.getElementById('event-count'), allEvents.length);
       document.getElementById('event-range-label').textContent = `Next ${activeDays} days`;
 
       // Watchlist coverage: how many of my stocks have an upcoming event
       const mySymbols   = new Set(stocksRes.stocks.map(s => s.symbol));
       const matchCount  = new Set(allEvents.filter(e => mySymbols.has(e.symbol)).map(e => e.symbol)).size;
       const total       = mySymbols.size;
-      document.getElementById('watchlist-coverage').textContent =
-        total === 0 ? '—' : `${matchCount} / ${total}`;
+      if (total === 0) {
+        document.getElementById('watchlist-coverage').textContent = '—';
+      } else {
+        countUp(document.getElementById('watchlist-coverage'), matchCount, 850, v => `${v} / ${total}`);
+      }
       document.getElementById('watchlist-label').textContent =
         total === 0
           ? 'Add stocks to get started'
@@ -536,6 +595,12 @@
 
       html += '</tbody></table></div>';
       container.innerHTML = html;
+
+      // Stagger-animate each row as it appears
+      container.querySelectorAll('tbody tr').forEach((row, i) => {
+        row.classList.add('events-row-anim');
+        row.style.animationDelay = `${i * 0.035}s`;
+      });
     }
 
     // ── Refresh ─────────────────────────────────────────────────────────────
