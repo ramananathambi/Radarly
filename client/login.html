@@ -8,6 +8,18 @@
   <link rel="stylesheet" href="/assets/style.css" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .login-main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
     .divider {
       display: flex;
       align-items: center;
@@ -89,7 +101,8 @@
   <nav class="nav">
     <a class="nav-brand" href="/"><img src="/assets/logo-nav.png" alt="Radarly" class="nav-logo"></a>
   </nav>
-  <div class="container" style="max-width:400px;margin-top:48px;">
+  <main class="login-main">
+  <div class="container" style="max-width:400px;margin-top:0;padding:0;">
     <div class="card">
       <h2 style="margin-bottom:8px;text-align:center;">Sign in to <span style="color:var(--accent);">Radarly</span></h2>
       <p style="color:var(--text-secondary);margin-bottom:24px;text-align:center;">Choose your preferred sign-in method</p>
@@ -190,6 +203,7 @@
       </div>
     </div>
   </div>
+  </main>
 
   <footer class="site-footer">
     <div>Built in Chennai ❤️ for India 🇮🇳</div>
