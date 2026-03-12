@@ -96,6 +96,35 @@
     #toggle-row a#toggle-mode-link { color: var(--accent); }
     #forgot-flow { color: rgba(255,255,255,0.55); }
 
+    /* ── Floating labels ─────────────────────────────────── */
+    .float-label { position: relative; text-align: left !important; }
+    .float-label input {
+      padding-top: 18px !important;
+      padding-bottom: 8px !important;
+      text-align: left !important;
+    }
+    .float-label label {
+      position: absolute;
+      left: 14px;
+      top: 11px;
+      font-size: 14px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.35) !important;
+      pointer-events: none;
+      transition: top 0.18s ease, font-size 0.18s ease, color 0.18s ease;
+      padding: 0 3px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .float-label input:focus ~ label,
+    .float-label input:not(:placeholder-shown) ~ label,
+    .float-label input:-webkit-autofill ~ label {
+      top: -7px;
+      font-size: 11px;
+      color: var(--accent) !important;
+      background: #111111;
+    }
+
     /* ── Card shake on error ─────────────────────────────── */
     @keyframes card-shake {
       0%, 100% { transform: translateX(0); }
@@ -147,17 +176,17 @@
 
       <!-- Unified Email / Phone form -->
       <form id="auth-form" style="text-align:center;">
-        <div class="form-group" id="name-group" style="display:none;text-align:center;">
+        <div class="form-group float-label" id="name-group" style="display:none;">
+          <input type="text" id="reg-name" placeholder=" " />
           <label for="reg-name">Full Name</label>
-          <input type="text" id="reg-name" placeholder="Your full name" style="text-align:center;" />
         </div>
-        <div class="form-group" style="text-align:center;">
+        <div class="form-group float-label">
+          <input type="text" id="identity-input" placeholder=" " required autocomplete="username" />
           <label for="identity-input">Email or Phone</label>
-          <input type="text" id="identity-input" placeholder="you@example.com or +91 9876543210" required style="text-align:center;" autocomplete="username" />
         </div>
-        <div class="form-group" id="password-group" style="display:none;text-align:center;">
+        <div class="form-group float-label" id="password-group" style="display:none;">
+          <input type="password" id="password-input" placeholder=" " minlength="8" />
           <label for="password-input">Password</label>
-          <input type="password" id="password-input" placeholder="Min 8 characters" minlength="8" style="text-align:center;" />
         </div>
         <button type="submit" class="btn btn-primary" style="width:100%;" id="submit-btn">Continue</button>
         <div id="toggle-row" style="margin-top:12px;font-size:13px;color:var(--text-secondary);display:none;">
@@ -174,9 +203,9 @@
         <!-- Step 1: Enter email -->
         <div id="forgot-step-1">
           <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;text-align:center;">Enter your account email and we'll send you a reset OTP.</p>
-          <div class="form-group" style="text-align:center;">
+          <div class="form-group float-label">
+            <input type="email" id="forgot-email" placeholder=" " />
             <label for="forgot-email">Email Address</label>
-            <input type="email" id="forgot-email" placeholder="you@example.com" style="text-align:center;" />
           </div>
           <button class="btn btn-primary" style="width:100%;" id="forgot-send-btn" onclick="sendForgotOTP()">Send OTP</button>
         </div>
@@ -197,13 +226,13 @@
         <!-- Step 3: New password -->
         <div id="forgot-step-3" style="display:none;">
           <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;text-align:center;">Choose a new password for your account.</p>
-          <div class="form-group" style="text-align:center;">
+          <div class="form-group float-label">
+            <input type="password" id="forgot-newpass" placeholder=" " minlength="8" />
             <label for="forgot-newpass">New Password</label>
-            <input type="password" id="forgot-newpass" placeholder="Min 8 characters" minlength="8" style="text-align:center;" />
           </div>
-          <div class="form-group" style="text-align:center;">
+          <div class="form-group float-label">
+            <input type="password" id="forgot-confirmpass" placeholder=" " />
             <label for="forgot-confirmpass">Confirm Password</label>
-            <input type="password" id="forgot-confirmpass" placeholder="Repeat password" style="text-align:center;" />
           </div>
           <button class="btn btn-primary" style="width:100%;" id="forgot-reset-btn" onclick="resetPassword()">Reset Password</button>
         </div>

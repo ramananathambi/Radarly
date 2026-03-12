@@ -23,7 +23,10 @@
   margin-bottom: 24px;
 }
 .lp-hero-text h1 span {
-  color: var(--accent);
+  background: linear-gradient(135deg, #e93244, #ff6b6b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 .lp-hero-text p {
   font-size: 20px;

@@ -20,7 +20,7 @@
   <section class="lp-hero">
     <div class="lp-hero-inner">
       <div class="lp-hero-text">
-        <h1>Never Miss a <span id="hero-word">Deadline</span></h1>
+        <h1>Never Miss a <span id="hero-word"></span></h1>
         <p>We monitor NSE & BSE daily. The moment a corporate action is announced — dividend, bonus, split, or buyback — you get a WhatsApp alert with everything you need to act.</p>
         <a href="/login.html" class="btn btn-primary lp-cta">Get Started — It's Free</a>
         <div class="lp-hero-note">No credit card required. Free forever.</div>
@@ -280,25 +280,41 @@
       }, { passive: true });
     })();
 
-    // Word cycling in hero
+    // ── Hero word: typewriter on load, then cycle ──────────────────────────
     const heroWord = document.getElementById('hero-word');
     const words = ['Dividend', 'Bonus', 'Split', 'Buyback', 'Deadline'];
     let wordIndex = 0;
-    setInterval(() => {
+
+    function cycleWord() {
       heroWord.style.opacity = '0';
       heroWord.style.transform = 'translateY(-10px)';
       setTimeout(() => {
         wordIndex = (wordIndex + 1) % words.length;
         heroWord.textContent = words[wordIndex];
         heroWord.style.transform = 'translateY(10px)';
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            heroWord.style.opacity = '1';
-            heroWord.style.transform = 'translateY(0)';
-          });
-        });
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          heroWord.style.opacity = '1';
+          heroWord.style.transform = 'translateY(0)';
+        }));
       }, 320);
-    }, 2600);
+    }
+
+    function typeWord(word, onDone) {
+      heroWord.textContent = '';
+      let i = 0;
+      const t = setInterval(() => {
+        heroWord.textContent += word[i++];
+        if (i === word.length) {
+          clearInterval(t);
+          if (onDone) setTimeout(onDone, 1800); // pause on full word
+        }
+      }, 72);
+    }
+
+    // Wait for h1 hero-in animation (750ms), then type "Dividend"
+    setTimeout(() => {
+      typeWord(words[0], () => setInterval(cycleWord, 2600));
+    }, 800);
 
     // Scroll fade-in via IntersectionObserver
     const observer = new IntersectionObserver((entries) => {
