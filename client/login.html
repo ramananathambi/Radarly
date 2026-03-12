@@ -130,6 +130,7 @@
       font-size: 11px;
       color: var(--accent) !important;
       background: #111111;
+      z-index: 1;
     }
 
     /* ── Password group — CSS hide so autofill can discover it ── */
@@ -427,7 +428,7 @@
         document.getElementById('password-input').setAttribute('required', '');
         toggleRow.style.display = 'block';
         submitBtn.textContent = isRegisterMode ? 'Create Account' : 'Sign In';
-        if (firstTime && !isMobile) document.getElementById('password-input').focus();
+        if (firstTime && !isMobile && isEmail(val)) document.getElementById('password-input').focus();
       } else {
         passwordGroup.classList.remove('visible');
         document.getElementById('password-input').removeAttribute('required');
