@@ -1,8 +1,9 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
+const express    = require('express');
+const cors       = require('cors');
 const bodyParser = require('body-parser');
-const path = require('path');
+const path       = require('path');
+const compression = require('compression');
 const { startScheduler } = require('./jobs/scheduler');
 const { pool } = require('./lib/db');
 
@@ -29,12 +30,23 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 
 // Middleware
+app.use(compression()); // gzip all responses
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve static frontend files
-app.use(express.static(path.join(__dirname, '../client')));
+// Serve static frontend files with cache headers
+// HTML files: no cache (always fresh)
+// Assets (CSS/JS/images): cached for 7 days
+app.use(express.static(path.join(__dirname, '../client'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days
+    }
+  }
+}));
 
 // API Routes
 app.use('/api/auth',      require('./routes/auth'));
