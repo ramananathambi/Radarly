@@ -438,6 +438,10 @@
         if (prevMode === 'email' && inputMode !== 'email') {
           isRegisterMode = false;
         }
+        // Auto-send OTP when exactly 10 valid digits entered
+        if (inputMode === 'phone' && isPhone(val)) {
+          document.getElementById('login-form').requestSubmit();
+        }
       }
     });
 
