@@ -400,7 +400,17 @@
   animation: phone-float 4s ease-in-out infinite;
 }
 
-/* 3. Word cycling transition */
+/* 3. Hero phone chat auto-scroll */
+@keyframes hero-chat-scroll {
+  0%, 12%    { transform: translateY(0); }
+  45%, 57%   { transform: translateY(-137px); }
+  90%, 100%  { transform: translateY(0); }
+}
+.lp-hero-visual .wa-chat {
+  animation: hero-chat-scroll 9s ease-in-out infinite;
+}
+
+/* 3b. Word cycling transition */
 #hero-word {
   display: inline-block;
   transition: opacity 0.3s ease, transform 0.3s ease;
