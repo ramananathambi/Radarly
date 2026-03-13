@@ -93,7 +93,9 @@ a:hover { text-decoration: underline; }
   transition: all 0.2s ease;
   letter-spacing: -0.01em;
 }
-.btn:hover  { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+@media (hover: hover) {
+  .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+}
 .btn:active { transform: scale(0.97) translateY(0) !important; box-shadow: none !important; transition: transform 0.08s, box-shadow 0.08s; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-hover); }
