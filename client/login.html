@@ -438,9 +438,9 @@
         if (prevMode === 'email' && inputMode !== 'email') {
           isRegisterMode = false;
         }
-        // Focus Send OTP button when 10 valid digits entered
+        // Auto-send OTP when 10 valid digits entered
         if (inputMode === 'phone' && isPhone(val)) {
-          submitBtn.focus();
+          document.getElementById('login-form').requestSubmit();
         }
       }
     });
