@@ -220,31 +220,21 @@ async function fetchAllNSE() {
   return [];
 }
 
-// ─── BSE: JSON API ───────────────────────────────────────────────────────────
+// ─── BSE: curl with cookie acquisition (avoids IP-based blocks) ──────────────
 
-async function fetchBSEGroup(group) {
-  const url = `https://api.bseindia.com/BseIndiaAPI/api/ListofScripData/w?Group=${group}&flag=true&Status=Active`;
-
-  const res = await axios.get(url, {
-    headers: BSE_HEADERS,
-    timeout: 30000,
-  });
+function parseBSERecords(raw) {
+  let data;
+  try { data = JSON.parse(raw); } catch { return []; }
 
   let records = [];
-  if (Array.isArray(res.data)) {
-    records = res.data;
-  } else if (res.data?.Table) {
-    records = res.data.Table;
-  }
+  if (Array.isArray(data))       records = data;
+  else if (data?.Table)          records = data.Table;
+  else if (data?.data)           records = data.data;
 
   const stocks = [];
   for (const item of records) {
-    // Use scrip_id (trading symbol) as primary symbol
-    const symbol = (item.scrip_id || item.SCRIP_ID || '').trim().toUpperCase();
-
-    // Skip empty or purely numeric symbols
+    const symbol = (item.scrip_id || item.SCRIP_ID || item.TradingSymbol || '').trim().toUpperCase();
     if (!symbol || /^\d+$/.test(symbol) || symbol.length > 30) continue;
-
     stocks.push({
       symbol,
       company_name: item.LONG_NAME || item.Scrip_Name || item.long_name || symbol,
@@ -252,30 +242,108 @@ async function fetchBSEGroup(group) {
       sector:       item.Industry || item.industry || null,
     });
   }
+  return stocks;
+}
 
+async function fetchBSEGroupViaCurl(group, cookieFile) {
+  const url = `https://api.bseindia.com/BseIndiaAPI/api/ListofScripData/w?Group=${group}&flag=true&Status=Active`;
+  const raw = execSync(
+    `curl -s -L -b "${cookieFile}" --max-time 30 --compressed ` +
+    `-H "User-Agent: ${UA}" ` +
+    `-H "Accept: application/json, text/plain, */*" ` +
+    `-H "Accept-Language: en-US,en;q=0.9" ` +
+    `-H "Referer: https://www.bseindia.com/" ` +
+    `-H "Origin: https://www.bseindia.com" ` +
+    `-H "Sec-Fetch-Dest: empty" ` +
+    `-H "Sec-Fetch-Mode: cors" ` +
+    `-H "Sec-Fetch-Site: same-site" ` +
+    `"${url}"`,
+    { encoding: 'utf8', timeout: 35000, maxBuffer: 10 * 1024 * 1024 }
+  );
+  if (!raw || raw.trim().startsWith('<')) return [];
+  return parseBSERecords(raw);
+}
+
+async function fetchBSEGroupViaAxios(group) {
+  const url = `https://api.bseindia.com/BseIndiaAPI/api/ListofScripData/w?Group=${group}&flag=true&Status=Active`;
+  const res = await axios.get(url, { headers: BSE_HEADERS, timeout: 30000 });
+  let records = [];
+  if (Array.isArray(res.data))  records = res.data;
+  else if (res.data?.Table)     records = res.data.Table;
+  if (!records.length) return [];
+  const stocks = [];
+  for (const item of records) {
+    const symbol = (item.scrip_id || item.SCRIP_ID || '').trim().toUpperCase();
+    if (!symbol || /^\d+$/.test(symbol) || symbol.length > 30) continue;
+    stocks.push({
+      symbol,
+      company_name: item.LONG_NAME || item.Scrip_Name || item.long_name || symbol,
+      exchange:     'BSE',
+      sector:       item.Industry || item.industry || null,
+    });
+  }
   return stocks;
 }
 
 async function fetchAllBSE() {
   const allStocks = new Map();
 
+  // Acquire BSE session cookies first
+  const cookieFile = path.join(os.tmpdir(), `bse_seed_cookies_${Date.now()}.txt`);
+  let hasCookies = false;
+  try {
+    execSync(
+      `curl -s -L -c "${cookieFile}" --max-time 20 --compressed ` +
+      `-H "User-Agent: ${UA}" ` +
+      `-H "Accept: text/html,application/xhtml+xml" ` +
+      `-H "Accept-Language: en-US,en;q=0.9" ` +
+      `-o /dev/null ` +
+      `"https://www.bseindia.com"`,
+      { encoding: 'utf8', timeout: 25000 }
+    );
+    hasCookies = true;
+    console.log('[SeedAll] BSE cookies acquired');
+    await sleep(1500);
+  } catch (err) {
+    console.warn('[SeedAll] BSE cookie acquisition failed:', err.message);
+  }
+
   for (const group of BSE_GROUPS) {
     try {
-      const stocks = await fetchBSEGroup(group);
-      let added = 0;
-      for (const s of stocks) {
-        if (!allStocks.has(s.symbol)) {
-          allStocks.set(s.symbol, s);
-          added++;
+      let stocks = [];
+
+      // Strategy 1: curl with cookies
+      if (hasCookies) {
+        try {
+          stocks = await fetchBSEGroupViaCurl(group, cookieFile);
+          if (stocks.length) console.log(`[SeedAll] BSE Group ${group} via curl: ${stocks.length} stocks`);
+        } catch (err) {
+          console.warn(`[SeedAll] BSE Group ${group} curl failed:`, err.message);
         }
       }
+
+      // Strategy 2: axios fallback
+      if (!stocks.length) {
+        try {
+          stocks = await fetchBSEGroupViaAxios(group);
+          if (stocks.length) console.log(`[SeedAll] BSE Group ${group} via axios: ${stocks.length} stocks`);
+        } catch (err) {
+          console.warn(`[SeedAll] BSE Group ${group} axios failed:`, err.message);
+        }
+      }
+
+      let added = 0;
+      for (const s of stocks) {
+        if (!allStocks.has(s.symbol)) { allStocks.set(s.symbol, s); added++; }
+      }
       console.log(`[SeedAll] BSE Group ${group}: ${stocks.length} stocks (${added} new, total unique: ${allStocks.size})`);
-      await sleep(1000);
+      await sleep(1200);
     } catch (err) {
       console.warn(`[SeedAll] BSE Group ${group} failed:`, err.message);
     }
   }
 
+  try { fs.unlinkSync(cookieFile); } catch {}
   console.log(`[SeedAll] BSE total: ${allStocks.size} unique stocks`);
   return Array.from(allStocks.values());
 }
