@@ -398,7 +398,8 @@
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-14px); }
 }
-.lp-hero-visual .phone-frame {
+.lp-hero-visual .phone-frame,
+.lp-preview-phone .phone-frame {
   animation: phone-float 4s ease-in-out infinite;
 }
 
