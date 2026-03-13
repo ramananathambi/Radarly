@@ -78,7 +78,7 @@ function parseNSECsv(csvText) {
     stocks.push({
       symbol,
       company_name: companyName,
-      exchange:     'NSE',
+      exchange:     'NSE,BSE', // Most NSE stocks are also listed on BSE
       sector:       null, // CSV doesn't include sector
     });
   }
@@ -178,7 +178,7 @@ async function fetchNSEViaIndices() {
           allStocks.set(symbol, {
             symbol,
             company_name: item.companyName || item.meta?.companyName || symbol,
-            exchange:     'NSE',
+            exchange:     'NSE,BSE', // Most NSE stocks are also listed on BSE
             sector:       item.industry || item.meta?.industry || null,
           });
         }
@@ -438,6 +438,19 @@ async function seedAllStocks() {
   }
 
   results.upserted = upserted;
+
+  // Migrate any existing records still marked as 'NSE' to 'NSE,BSE'
+  try {
+    const [migResult] = await pool.query(
+      `UPDATE stocks_master SET exchange = 'NSE,BSE' WHERE exchange = 'NSE'`
+    );
+    if (migResult.affectedRows > 0) {
+      console.log(`[SeedAll] Migrated ${migResult.affectedRows} legacy NSE records to NSE,BSE`);
+    }
+  } catch (err) {
+    console.warn('[SeedAll] Exchange migration warning:', err.message);
+  }
+
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   results.elapsed = elapsed;
 

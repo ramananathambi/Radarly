@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
   const params     = [];
 
   if (exchange) {
-    conditions.push('exchange = ?');
+    conditions.push('FIND_IN_SET(?, exchange) > 0');
     params.push(exchange);
   }
   if (sector) {
