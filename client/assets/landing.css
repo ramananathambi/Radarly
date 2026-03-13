@@ -394,6 +394,13 @@
 .lp-hero-visual        { animation: hero-in 0.85s 0.2s ease forwards; opacity: 0; }
 
 /* 2. Floating phone */
+@keyframes phone-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-14px); }
+}
+.lp-hero-visual .phone-frame {
+  animation: phone-float 4s ease-in-out infinite;
+}
 
 /* 3. Word cycling transition */
 #hero-word {
