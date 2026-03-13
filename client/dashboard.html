@@ -599,9 +599,6 @@
         if (sortColumn === 'company_name') {
           valA = (a.stocks_master?.company_name || '').toLowerCase();
           valB = (b.stocks_master?.company_name || '').toLowerCase();
-        } else if (sortColumn === 'exchange') {
-          valA = (a.stocks_master?.exchange || '').toLowerCase();
-          valB = (b.stocks_master?.exchange || '').toLowerCase();
         } else {
           valA = (a[sortColumn] || '').toString().toLowerCase();
           valB = (b[sortColumn] || '').toString().toLowerCase();
@@ -643,25 +640,21 @@
       html += `<th class="${sc('company_name')}" onclick="toggleSort('company_name')">Company</th>`;
       html += `<th class="${sc('ex_date')}" onclick="toggleSort('ex_date')">Ex-Date</th>`;
       html += '<th>Details</th>';
-      html += `<th class="${sc('exchange')}" onclick="toggleSort('exchange')">Exchange</th>`;
       html += '</tr></thead><tbody>';
 
       for (const ev of sorted) {
         const co        = ev.stocks_master?.company_name || ev.symbol;
-        const exchange  = ev.stocks_master?.exchange || '—';
-        const badgeCls  = exchange === 'NSE' ? 'badge-nse' : exchange === 'BSE' ? 'badge-bse' : 'badge-both';
         const typeClass = eventBadgeClass(ev.action_type);
         const details   = buildDetails(ev);
 
         html += `<tr>
           <td><span class="event-badge ${typeClass}">${formatType(ev.action_type)}</span></td>
           <td class="sym-cell" style="text-align:left;cursor:default;"
-              data-company="${co}" data-exchange="${exchange}"
+              data-company="${co}"
               data-price="${ev.stocks_master?.last_price || ''}"><strong>${ev.symbol}</strong></td>
           <td style="font-size:13px;text-align:left;">${co}</td>
           <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${formatDate(ev.ex_date)}</td>
           <td class="ev-details">${details}</td>
-          <td><span class="badge ${badgeCls}">${exchange}</span></td>
         </tr>`;
       }
 
@@ -695,7 +688,7 @@
       const price = parseFloat(cell.dataset.price);
       _tt.innerHTML = `
         <div class="tt-name">${cell.dataset.company}</div>
-        <div class="tt-meta">${cell.dataset.exchange}${price ? ` · ₹${price.toLocaleString('en-IN')}` : ''}</div>
+        <div class="tt-meta">${price ? `₹${price.toLocaleString('en-IN')}` : 'NSE'}</div>
       `;
       const r = cell.getBoundingClientRect();
       let left = r.left, top = r.bottom + 6;

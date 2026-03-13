@@ -115,14 +115,12 @@
         }
 
         let html = '<div class="table-wrap"><table><thead><tr>';
-        html += '<th>Symbol</th><th>Company</th><th style="text-align:right;">LTP (₹)</th><th>Exchange</th><th>Sector</th><th style="text-align:center;">Remove</th>';
+        html += '<th>Symbol</th><th>Company</th><th style="text-align:right;">LTP (₹)</th><th>Sector</th><th style="text-align:center;">Remove</th>';
         html += '</tr></thead><tbody>';
 
         for (const s of stocks) {
           const co  = s.stocks_master?.company_name || s.symbol;
-          const ex  = s.stocks_master?.exchange || '—';
           const sec = s.stocks_master?.sector || '—';
-          const badgeClass = ex === 'NSE' ? 'badge-nse' : ex === 'BSE' ? 'badge-bse' : 'badge-both';
 
           const ltp = s.stocks_master?.last_price
             ? `₹${Number(s.stocks_master.last_price).toLocaleString('en-IN', {
@@ -134,7 +132,6 @@
             <td><strong>${s.symbol}</strong></td>
             <td>${co}</td>
             <td class="price-cell" style="text-align:right;">${ltp}</td>
-            <td><span class="badge ${badgeClass}">${ex}</span></td>
             <td style="color:var(--text-secondary);font-size:13px;">${sec}</td>
             <td style="text-align:center;">
               <button class="remove-btn" onclick="removeStock('${s.symbol}', this)">Remove</button>
