@@ -6,32 +6,122 @@
   <title>Verify OTP — Radarly</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   <link rel="stylesheet" href="/assets/style.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .login-main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    /* Dark card — same as login */
+    .card {
+      background: #111111;
+      border-color: #2a2a2a;
+      color: #ffffff;
+      width: 100%;
+      max-width: 400px;
+    }
+    .card h2 { color: #ffffff; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .card p  { color: rgba(255,255,255,0.55); font-size: 14px; margin-bottom: 24px; }
+
+    .form-group input {
+      background: #1e1e1e;
+      border-color: #333333;
+      color: #ffffff;
+    }
+    .form-group input::placeholder { color: rgba(255,255,255,0.25); }
+    .form-group input:focus { border-color: var(--accent); background: #1e1e1e; }
+    .form-group input:-webkit-autofill,
+    .form-group input:-webkit-autofill:hover,
+    .form-group input:-webkit-autofill:focus {
+      -webkit-box-shadow: 0 0 0px 1000px #1e1e1e inset;
+      -webkit-text-fill-color: #ffffff;
+    }
+    .form-group label { color: rgba(255,255,255,0.55); font-size: 13px; margin-bottom: 6px; display: block; }
+
+    /* OTP input */
+    #otp {
+      letter-spacing: 10px;
+      text-align: center;
+      font-size: 26px;
+      font-weight: 700;
+      padding: 14px 16px !important;
+    }
+
+    /* Resend row */
+    .resend-row {
+      margin-top: 20px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .resend-btn {
+      background: none;
+      border: 1px solid #333333;
+      color: rgba(255,255,255,0.55);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .resend-btn:not(:disabled):hover {
+      border-color: #ffffff;
+      color: #ffffff;
+    }
+    .resend-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .timer-text { color: rgba(255,255,255,0.4); font-size: 13px; }
+
+    /* Back link */
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.35);
+    }
+    .back-link a { color: rgba(255,255,255,0.35); }
+    .back-link a:hover { color: var(--accent); text-decoration: none; }
+  </style>
 </head>
 <body>
   <nav class="nav">
     <a class="nav-brand" href="/"><img src="/assets/logo-nav.png" alt="Radarly" class="nav-logo"></a>
   </nav>
-  <div class="container" style="max-width:400px;margin-top:48px;">
+
+  <main class="login-main">
     <div class="card">
-      <h2 style="margin-bottom:8px;">Enter OTP</h2>
-      <p style="color:var(--text-secondary);margin-bottom:24px;" id="subtitle">We sent a 6-digit code to your phone</p>
+      <h2>Enter OTP</h2>
+      <p id="subtitle">We sent a 6-digit code to your phone</p>
       <div id="alert-box"></div>
 
       <form id="otp-form">
         <div class="form-group">
           <label for="otp">OTP Code</label>
-          <input type="text" id="otp" placeholder="123456" maxlength="6" pattern="[0-9]{6}" required
-                 style="letter-spacing:8px;text-align:center;font-size:24px;font-weight:700;" />
+          <input type="text" id="otp" inputmode="numeric" placeholder="······"
+                 maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" required />
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;" id="verify-btn">Verify</button>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:4px;" id="verify-btn">Verify</button>
       </form>
 
-      <div style="margin-top:16px;text-align:center;">
-        <button class="btn btn-outline btn-sm" id="resend-btn" disabled>Resend OTP</button>
-        <span id="timer" style="margin-left:8px;color:var(--text-secondary);font-size:13px;"></span>
+      <div class="resend-row">
+        <button class="resend-btn" id="resend-btn" disabled>Resend OTP</button>
+        <span class="timer-text" id="timer"></span>
       </div>
+
+      <div class="back-link"><a href="/login.html">← Back to Sign In</a></div>
     </div>
-  </div>
+  </main>
 
   <footer class="site-footer">
     <div>Built in Chennai ❤️ for India 🇮🇳</div>
@@ -43,26 +133,27 @@
     const phone = localStorage.getItem('otp_phone');
     if (!phone) window.location.href = '/login.html';
 
-    // Show masked phone
     document.getElementById('subtitle').textContent =
       `We sent a 6-digit code to ${phone.slice(0, 4)}****${phone.slice(-3)}`;
 
-    // Focus OTP input
     document.getElementById('otp').focus();
 
-    // Resend countdown
+    // Countdown
     let countdown = 30;
-    const timerEl = document.getElementById('timer');
+    const timerEl  = document.getElementById('timer');
     const resendBtn = document.getElementById('resend-btn');
+    timerEl.textContent = `${countdown}s`;
     const interval = setInterval(() => {
       countdown--;
-      timerEl.textContent = `${countdown}s`;
-      if (countdown <= 0) {
-        clearInterval(interval);
-        timerEl.textContent = '';
-        resendBtn.disabled = false;
-      }
+      timerEl.textContent = countdown > 0 ? `${countdown}s` : '';
+      if (countdown <= 0) { clearInterval(interval); resendBtn.disabled = false; }
     }, 1000);
+
+    // Auto-submit when 6 digits entered
+    document.getElementById('otp').addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+      if (e.target.value.length === 6) document.getElementById('otp-form').requestSubmit();
+    });
 
     resendBtn.addEventListener('click', async () => {
       resendBtn.disabled = true;
@@ -75,7 +166,6 @@
       }
     });
 
-    // Verify
     document.getElementById('otp-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('verify-btn');
@@ -87,12 +177,7 @@
         const data = await api('POST', '/api/auth/otp/verify', { phone, otp });
         setToken(data.session_token);
         localStorage.removeItem('otp_phone');
-
-        if (data.needsOnboarding) {
-          window.location.href = '/onboarding.html';
-        } else {
-          window.location.href = '/dashboard.html';
-        }
+        window.location.href = data.needsOnboarding ? '/onboarding.html' : '/dashboard.html';
       } catch (err) {
         showAlert('alert-box', err.message, 'error');
       } finally {
