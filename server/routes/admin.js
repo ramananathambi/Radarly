@@ -143,13 +143,13 @@ router.post('/alert', requireAdmin, async (req, res) => {
   res.json({ success: true, message: 'Alert engine started in background' });
 });
 
-// POST /api/admin/seed-stocks — fetch all NSE+BSE stocks and upsert
+// POST /api/admin/seed-stocks — fetch all NSE stocks and upsert
 router.post('/seed-stocks', requireAdmin, async (req, res) => {
   console.log('[Admin] Full stock seed triggered');
   seedAllStocks()
     .then(results => console.log('[Admin] Stock seed complete:', JSON.stringify(results)))
     .catch(err => console.error('[Admin] Stock seed error:', err.message));
-  res.json({ success: true, message: 'Stock seed started in background — fetching all NSE + BSE stocks. Check logs for progress.' });
+  res.json({ success: true, message: 'Stock seed started in background — fetching NSE equity stocks. Check logs for progress.' });
 });
 
 module.exports = router;

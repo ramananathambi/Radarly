@@ -95,7 +95,7 @@
 
       <!-- Action buttons -->
       <div class="action-bar">
-        <button class="btn btn-primary" id="btn-fetch" onclick="triggerFetch()">Run Data Fetch (NSE + BSE)</button>
+        <button class="btn btn-primary" id="btn-fetch" onclick="triggerFetch()">Run Data Fetch (NSE)</button>
         <button class="btn btn-outline" id="btn-alert" onclick="triggerAlert()">Run Alert Engine</button>
         <button class="btn btn-outline" id="btn-seed" onclick="triggerSeedStocks()">Seed All Stocks</button>
         <button class="btn btn-outline" onclick="loadAll()">Refresh</button>
@@ -338,7 +338,7 @@
     }
 
     async function triggerSeedStocks() {
-      if (!confirm('This will fetch ALL stocks from NSE (~2000) and BSE (~4000) and upsert into stocks_master. Continue?')) return;
+      if (!confirm('This will fetch all NSE equity stocks (~2000) and upsert into stocks_master. Continue?')) return;
       const btn = document.getElementById('btn-seed');
       setLoading(btn, true);
       try {
