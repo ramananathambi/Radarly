@@ -3,14 +3,13 @@
  * Cron job runner — all jobs run in Asia/Kolkata (IST) timezone.
  *
  * Schedule:
- *   8:00 AM IST — NSE + BSE corporate actions fetch (pre-market)
+ *   8:00 AM IST — NSE corporate actions fetch (pre-market)
  *   9:15 AM - 3:45 PM IST (every 5 min) — LTP price fetch
  *   9:30 AM IST — Alert engine
- *   6:00 PM IST — NSE + BSE corporate actions fetch (post-market, catches intraday announcements)
+ *   6:00 PM IST — NSE corporate actions fetch (post-market, catches intraday announcements)
  */
 const cron = require('node-cron');
 const { fetchNSE }       = require('./fetchNSE');
-const { fetchBSE }       = require('./fetchBSE');
 const { runAlertEngine } = require('./alertEngine');
 const { fetchPrices }    = require('./fetchPrices');
 
@@ -45,22 +44,14 @@ async function withRetry(label, fn, maxRetries = MAX_RETRIES) {
 
 async function runDataFetch() {
   console.log('[Scheduler] ── Data fetch started ──');
-  const results = { nse: null, bse: null };
 
   try {
-    results.nse = await withRetry('NSE fetch', fetchNSE);
+    const result = await withRetry('NSE fetch', fetchNSE);
+    console.log('[Scheduler] ── Data fetch complete ──', result);
+    return result;
   } catch (err) {
-    console.error('[Scheduler] NSE fetch ultimately failed — continuing to BSE');
+    console.error('[Scheduler] NSE fetch ultimately failed');
   }
-
-  try {
-    results.bse = await withRetry('BSE fetch', fetchBSE);
-  } catch (err) {
-    console.error('[Scheduler] BSE fetch ultimately failed');
-  }
-
-  console.log('[Scheduler] ── Data fetch complete ──', results);
-  return results;
 }
 
 async function runPriceFetch() {
@@ -74,7 +65,7 @@ async function runPriceFetch() {
 // ─── Cron registration ────────────────────────────────────────────────────────
 
 function startScheduler() {
-  // 8:00 AM IST — fetch NSE + BSE corporate actions
+  // 8:00 AM IST — fetch NSE corporate actions
   cron.schedule('0 8 * * *', async () => {
     try {
       await runDataFetch();
@@ -119,10 +110,10 @@ function startScheduler() {
   }, { timezone: 'Asia/Kolkata' });
 
   console.log('[Scheduler] Cron jobs registered (IST timezone)');
-  console.log('[Scheduler]   8:00 AM IST      — NSE + BSE corporate actions fetch (pre-market)');
+  console.log('[Scheduler]   8:00 AM IST      — NSE corporate actions fetch (pre-market)');
   console.log('[Scheduler]   9:15-15:45 IST   — LTP price fetch (every 5 min, Mon-Fri)');
   console.log('[Scheduler]   9:30 AM IST      — Alert engine');
-  console.log('[Scheduler]   6:00 PM IST      — NSE + BSE corporate actions fetch (post-market)');
+  console.log('[Scheduler]   6:00 PM IST      — NSE corporate actions fetch (post-market)');
 }
 
 module.exports = { startScheduler, runDataFetch, runPriceFetch };

@@ -81,14 +81,6 @@
         <input type="text" id="search-input" placeholder="Search by symbol or company name..." />
       </div>
       <div class="form-group">
-        <label>Exchange</label>
-        <select id="filter-exchange">
-          <option value="">All Exchanges</option>
-          <option value="NSE">NSE</option>
-          <option value="BSE">BSE</option>
-        </select>
-      </div>
-      <div class="form-group">
         <label>Sector</label>
         <select id="filter-sector">
           <option value="">All Sectors</option>
@@ -161,10 +153,6 @@
         }, 300);
       });
 
-      document.getElementById('filter-exchange').addEventListener('change', () => {
-        if (!isSearchMode) { currentPage = 1; loadStocks(); }
-      });
-
       document.getElementById('filter-sector').addEventListener('change', () => {
         if (!isSearchMode) { currentPage = 1; loadStocks(); }
       });
@@ -180,11 +168,9 @@
       const container = document.getElementById('stocks-container');
       container.innerHTML = '<div class="spinner"></div>';
 
-      const exchange = document.getElementById('filter-exchange').value;
       const sector = document.getElementById('filter-sector').value;
 
       let url = `/api/stocks?page=${currentPage}`;
-      if (exchange) url += `&exchange=${encodeURIComponent(exchange)}`;
       if (sector) url += `&sector=${encodeURIComponent(sector)}`;
 
       try {
@@ -246,7 +232,6 @@
       html += `<th class="${sc('symbol')}" onclick="toggleSort('symbol')">Symbol</th>`;
       html += `<th class="${sc('company_name')}" onclick="toggleSort('company_name')">Company</th>`;
       html += `<th class="${sc('last_price')}" style="text-align:right;" onclick="toggleSort('last_price')">LTP (₹)</th>`;
-      html += '<th>Exchange</th>';
       html += `<th class="${sc('sector')}" onclick="toggleSort('sector')">Sector</th>`;
       html += '<th style="text-align:center;">Watchlist</th>';
       html += '</tr></thead><tbody>';
@@ -255,8 +240,6 @@
         const isSaved = savedSymbols.has(s.symbol);
         const btnClass = isSaved ? 'bookmark-btn saved' : 'bookmark-btn';
         const btnText = isSaved ? 'Saved' : '+ Add';
-        const badge = s.exchange || '—';
-        const badgeClass = badge === 'NSE' ? 'badge-nse' : badge === 'BSE' ? 'badge-bse' : 'badge-both';
 
         const priceDisplay = s.last_price
           ? `₹${Number(s.last_price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -266,7 +249,6 @@
         html += `<td style="text-align:left;"><strong>${s.symbol}</strong></td>`;
         html += `<td style="text-align:left;">${s.company_name || '—'}</td>`;
         html += `<td class="price-cell" style="text-align:right;">${priceDisplay}</td>`;
-        html += `<td><span class="badge ${badgeClass}">${badge}</span></td>`;
         html += `<td>${s.sector || '—'}</td>`;
         html += `<td style="text-align:center;"><button class="${btnClass}" onclick="toggleBookmark('${s.symbol}', this)">${btnText}</button></td>`;
         html += `</tr>`;

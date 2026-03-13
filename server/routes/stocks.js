@@ -4,21 +4,15 @@ const { pool } = require('../lib/db');
 
 const PAGE_SIZE = 50;
 
-// GET /api/stocks?page=1&exchange=NSE&sector=IT
+// GET /api/stocks?page=1&sector=IT
 router.get('/', async (req, res) => {
-  const page     = Math.max(1, parseInt(req.query.page) || 1);
-  const exchange = req.query.exchange?.toUpperCase(); // 'NSE', 'BSE', 'BOTH'
-  const sector   = req.query.sector;
-  const offset   = (page - 1) * PAGE_SIZE;
+  const page   = Math.max(1, parseInt(req.query.page) || 1);
+  const sector = req.query.sector;
+  const offset = (page - 1) * PAGE_SIZE;
 
-  // Build WHERE clause dynamically
   const conditions = ['is_active = 1'];
   const params     = [];
 
-  if (exchange) {
-    conditions.push('FIND_IN_SET(?, exchange) > 0');
-    params.push(exchange);
-  }
   if (sector) {
     conditions.push('sector = ?');
     params.push(sector);
@@ -27,16 +21,14 @@ router.get('/', async (req, res) => {
   const whereClause = conditions.join(' AND ');
 
   try {
-    // Get total count
     const [countRows] = await pool.execute(
       `SELECT COUNT(*) AS total FROM stocks_master WHERE ${whereClause}`,
       params
     );
     const total = countRows[0].total;
 
-    // Get paginated data
     const [rows] = await pool.execute(
-      `SELECT symbol, company_name, exchange, sector, industry, last_price, price_updated_at
+      `SELECT symbol, company_name, sector, last_price, price_updated_at
        FROM stocks_master
        WHERE ${whereClause}
        ORDER BY symbol
@@ -68,7 +60,7 @@ router.get('/search', async (req, res) => {
   try {
     const searchTerm = `%${q}%`;
     const [rows] = await pool.execute(
-      `SELECT symbol, company_name, exchange, sector, last_price, price_updated_at
+      `SELECT symbol, company_name, sector, last_price, price_updated_at
        FROM stocks_master
        WHERE is_active = 1 AND (symbol LIKE ? OR company_name LIKE ?)
        ORDER BY symbol
