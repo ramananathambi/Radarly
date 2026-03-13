@@ -353,6 +353,63 @@
   line-height: 1.6;
 }
 
+/* Pricing */
+.lp-pricing-section { text-align: center; }
+.lp-pricing-card {
+  display: inline-block;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 40px 48px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.07);
+}
+.lp-pricing-amount {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  margin-bottom: 28px;
+}
+.lp-pricing-currency {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 10px;
+}
+.lp-pricing-number {
+  font-size: 72px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+  letter-spacing: -3px;
+}
+.lp-pricing-period {
+  font-size: 18px;
+  color: var(--text-secondary);
+  align-self: flex-end;
+  margin-bottom: 10px;
+}
+.lp-pricing-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lp-pricing-features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: var(--text);
+}
+.lp-pricing-features li svg { flex-shrink: 0; }
+.lp-pricing-cta { width: 100%; text-align: center; }
+
 /* Final CTA */
 .lp-final-cta {
   background: var(--primary);
