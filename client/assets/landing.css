@@ -89,11 +89,13 @@
   min-height: 560px;
   max-height: 560px;
 }
-.lp-preview-phone .phone-screen {
+.lp-preview-phone .phone-screen,
+.lp-hero-visual .phone-screen {
   overflow-y: auto;
   scrollbar-width: none;
 }
-.lp-preview-phone .phone-screen::-webkit-scrollbar {
+.lp-preview-phone .phone-screen::-webkit-scrollbar,
+.lp-hero-visual .phone-screen::-webkit-scrollbar {
   display: none;
 }
 
