@@ -282,33 +282,16 @@
       }, { passive: true });
     })();
 
-    // ── Hero phone auto-scroll + prevent event bleed ─────────────────────
+    // ── Hero phone: scrollable, stop events bubbling to parallax/page ────
     (function() {
       const screen = document.querySelector('.lp-hero-visual .phone-screen');
       if (!screen) return;
       // Force scrollable (overrides any cached CSS)
       screen.style.overflowY = 'auto';
       screen.style.scrollbarWidth = 'none';
-      // Stop wheel/touch events from bubbling to the parallax handler
+      // Stop wheel/touch events from bubbling out to the parallax/page scroll
       screen.addEventListener('wheel', e => e.stopPropagation(), { passive: true });
       screen.addEventListener('touchmove', e => e.stopPropagation(), { passive: true });
-      // Auto-scroll: ~25px/s, pause when user is touching
-      let paused = false, lastTime = null;
-      screen.addEventListener('touchstart', () => { paused = true; }, { passive: true });
-      screen.addEventListener('touchend', () => { setTimeout(() => { paused = false; }, 1500); }, { passive: true });
-      function step(ts) {
-        if (!paused) {
-          if (lastTime !== null) {
-            const delta = (ts - lastTime) / 1000;
-            const max = screen.scrollHeight - screen.clientHeight;
-            screen.scrollTop += delta * 25;
-            if (screen.scrollTop >= max) { screen.scrollTop = 0; }
-          }
-          lastTime = ts;
-        } else { lastTime = null; }
-        requestAnimationFrame(step);
-      }
-      requestAnimationFrame(step);
     })();
 
     // ── Hero word cycling ─────────────────────────────────────────────────
