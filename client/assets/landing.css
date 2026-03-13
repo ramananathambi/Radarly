@@ -35,6 +35,18 @@
   margin-bottom: 36px;
   max-width: 480px;
 }
+/* Nav login button */
+.nav-links .btn-outline {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: transparent;
+}
+.nav-links .btn-outline:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 .lp-cta {
   font-size: 17px;
   padding: 16px 40px;
