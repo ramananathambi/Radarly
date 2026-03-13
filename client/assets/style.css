@@ -92,8 +92,9 @@ a:hover { text-decoration: underline; }
   border: none;
   transition: all 0.2s ease;
   letter-spacing: -0.01em;
+  -webkit-tap-highlight-color: transparent;
 }
-.btn:hover  { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+.btn:hover  { transform: translateY(-1px); }
 .btn:active { transform: scale(0.97) translateY(0) !important; box-shadow: none !important; transition: transform 0.08s, box-shadow 0.08s; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--accent-hover); }
