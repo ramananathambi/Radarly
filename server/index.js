@@ -21,6 +21,38 @@ async function initDb() {
   } catch (err) {
     console.error('[DB] Migration error:', err.message);
   }
+
+  // ── Alert type migrations ─────────────────────────────────────────────────
+  try {
+    // Activate RIGHTS (was previously inactive / coming soon)
+    await pool.execute(
+      `UPDATE alert_types SET is_active = 1 WHERE code = 'RIGHTS'`
+    );
+
+    // Add IPO alert type if it doesn't exist yet
+    await pool.execute(
+      `INSERT IGNORE INTO alert_types (code, name, description, is_active)
+       VALUES ('IPO', 'IPO Alerts', 'Get notified about upcoming IPO listings on NSE/BSE.', 1)`
+    );
+
+    // Backfill existing users — give them RIGHTS + IPO prefs if they don't have them
+    await pool.execute(`
+      INSERT IGNORE INTO user_alert_preferences (user_id, alert_type, scope, is_enabled)
+      SELECT u.id, at.code, 'all_stocks', 1
+      FROM users u
+      CROSS JOIN alert_types at
+      WHERE at.code IN ('RIGHTS', 'IPO')
+        AND at.is_active = 1
+        AND NOT EXISTS (
+          SELECT 1 FROM user_alert_preferences uap
+          WHERE uap.user_id = u.id AND uap.alert_type = at.code
+        )
+    `);
+
+    console.log('[DB] Alert types migration complete (RIGHTS active, IPO added, users backfilled)');
+  } catch (err) {
+    console.error('[DB] Alert types migration error:', err.message);
+  }
 }
 
 const app = express();

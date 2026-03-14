@@ -138,6 +138,7 @@
       SPLIT:       'Get notified about stock split events.',
       RIGHTS:      'Get notified when rights issues are announced.',
       BUYBACK:     'Get notified about share buyback events.',
+      IPO:         'Get notified about upcoming IPO listings on NSE/BSE.',
     };
 
     (async () => {
@@ -205,7 +206,7 @@
       const container = document.getElementById('inactive-prefs');
 
       // Show all known inactive types
-      const inactiveCodes = ['BONUS', 'SPLIT', 'RIGHTS', 'BUYBACK'].filter(
+      const inactiveCodes = ['BONUS', 'SPLIT', 'BUYBACK'].filter(
         code => !document.getElementById(`pref-${code}`)
       );
 
