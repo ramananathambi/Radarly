@@ -314,6 +314,9 @@
 }
 
 /* Feature Cards */
+.lp-why-bg {
+  background: #fff;
+}
 .lp-features {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -322,14 +325,20 @@
   margin: 0 auto;
 }
 .lp-feature-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: #000;
+  border: 1px solid #222;
   border-radius: 16px;
   padding: 32px;
   transition: box-shadow 0.2s, transform 0.2s;
 }
+.lp-feature-card h3 {
+  color: #fff;
+}
+.lp-feature-card p {
+  color: rgba(255,255,255,0.55);
+}
 .lp-feature-card:hover {
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
   transform: translateY(-2px);
 }
 .lp-feature-icon {
@@ -346,10 +355,11 @@
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 8px;
+  color: #fff;
 }
 .lp-feature-card p {
   font-size: 16px;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,0.55);
   line-height: 1.6;
 }
 
