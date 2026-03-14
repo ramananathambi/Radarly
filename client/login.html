@@ -163,6 +163,10 @@
       pointer-events: none;
       transition: background 0.2s;
     }
+
+    /* Hide until session check completes */
+    body { visibility: hidden; }
+    body.ready { visibility: visible; }
   </style>
 </head>
 <body>
@@ -255,10 +259,14 @@
     // If we just force-logged-out from dashboard, skip session check
     if (sessionStorage.getItem('_auth_cleared')) {
       sessionStorage.removeItem('_auth_cleared');
+      document.body.classList.add('ready');
     } else {
       // If already logged in AND backend recognises the user, redirect to dashboard
       _supa.auth.getSession().then(async ({ data: { session } }) => {
-        if (!session) return;
+        if (!session) {
+          document.body.classList.add('ready');
+          return;
+        }
         try {
           const resp = await fetch('/api/user/me', {
             headers: { 'Authorization': `Bearer ${session.access_token}` }
@@ -267,9 +275,11 @@
             window.location.href = '/dashboard.html';
           } else {
             await _supa.auth.signOut({ scope: 'local' });
+            document.body.classList.add('ready');
           }
         } catch {
           await _supa.auth.signOut({ scope: 'local' });
+          document.body.classList.add('ready');
         }
       });
     }
