@@ -41,6 +41,58 @@ async function initDb() {
     console.error('[DB] scheduler_log migration error:', err.message);
   }
 
+  // ── Unique email constraint (deduplicate first, then enforce) ────────────
+  try {
+    // Step 1: clean up related data for duplicate email accounts (keep the oldest)
+    await pool.execute(`
+      DELETE FROM user_alert_preferences
+      WHERE user_id IN (
+        SELECT id FROM (
+          SELECT u1.id FROM users u1
+          INNER JOIN users u2 ON u1.email = u2.email
+          WHERE u1.email IS NOT NULL AND u1.created_at > u2.created_at
+        ) AS dupes
+      )
+    `);
+    await pool.execute(`
+      DELETE FROM user_stocks
+      WHERE user_id IN (
+        SELECT id FROM (
+          SELECT u1.id FROM users u1
+          INNER JOIN users u2 ON u1.email = u2.email
+          WHERE u1.email IS NOT NULL AND u1.created_at > u2.created_at
+        ) AS dupes
+      )
+    `);
+    await pool.execute(`
+      DELETE FROM alert_log
+      WHERE user_id IN (
+        SELECT id FROM (
+          SELECT u1.id FROM users u1
+          INNER JOIN users u2 ON u1.email = u2.email
+          WHERE u1.email IS NOT NULL AND u1.created_at > u2.created_at
+        ) AS dupes
+      )
+    `);
+    // Step 2: delete the duplicate users themselves (keep oldest per email)
+    await pool.execute(`
+      DELETE u1 FROM users u1
+      INNER JOIN users u2 ON u1.email = u2.email
+      WHERE u1.email IS NOT NULL AND u1.created_at > u2.created_at
+    `);
+    // Step 3: add UNIQUE constraint (ignore error if it already exists)
+    await pool.execute(`
+      ALTER TABLE users ADD UNIQUE INDEX idx_unique_email (email)
+    `);
+    console.log('[DB] Unique email constraint enforced');
+  } catch (err) {
+    if (err.code === 'ER_DUP_KEYNAME') {
+      console.log('[DB] Unique email index already exists — skipping');
+    } else {
+      console.error('[DB] Email unique constraint migration error:', err.message);
+    }
+  }
+
   // ── Alert type migrations ─────────────────────────────────────────────────
   try {
     // Activate RIGHTS (was previously inactive / coming soon)

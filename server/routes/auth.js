@@ -58,6 +58,19 @@ router.post('/sync', async (req, res) => {
     let user = rows[0] || null;
 
     if (!user) {
+      // Block if another account already uses this email
+      if (email) {
+        const [emailRows] = await pool.execute(
+          'SELECT id FROM users WHERE email = ? AND id != ?',
+          [email, supaId]
+        );
+        if (emailRows.length > 0) {
+          return res.status(409).json({
+            error: 'An account with this email already exists. Please delete your existing account first, or sign in with the same login method you used before.',
+          });
+        }
+      }
+
       // New user — create MySQL record using Supabase UUID as id
       await pool.execute(
         `INSERT INTO users (id, phone, email, is_verified) VALUES (?, ?, ?, 1)`,
