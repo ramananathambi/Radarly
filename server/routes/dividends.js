@@ -17,7 +17,7 @@ router.get('/upcoming', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT ca.symbol, ca.ex_date, ca.record_date, ca.details, ca.announced_at,
-              sm.company_name, sm.exchange, sm.sector
+              sm.company_name, sm.sector
        FROM corporate_actions ca
        JOIN stocks_master sm ON ca.symbol = sm.symbol
        WHERE ca.action_type = 'DIVIDEND'

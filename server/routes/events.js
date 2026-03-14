@@ -17,7 +17,7 @@ router.get('/upcoming', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT ca.symbol, ca.action_type, ca.ex_date, ca.details,
-              sm.company_name, sm.exchange, sm.last_price
+              sm.company_name, sm.last_price
        FROM corporate_actions ca
        JOIN stocks_master sm ON ca.symbol = sm.symbol
        WHERE ca.ex_date >= ?
@@ -39,7 +39,6 @@ router.get('/upcoming', async (req, res) => {
         details,
         stocks_master: {
           company_name: r.company_name,
-          exchange:     r.exchange,
           last_price:   r.last_price,
         },
       };

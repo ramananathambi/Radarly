@@ -54,7 +54,7 @@ async function runAlertEngine() {
   // Step 2: fetch corporate actions for T-2 date with stock details
   const [actions] = await pool.execute(
     `SELECT ca.symbol, ca.action_type, ca.ex_date, ca.record_date, ca.details,
-            sm.company_name, sm.exchange
+            sm.company_name
      FROM corporate_actions ca
      JOIN stocks_master sm ON ca.symbol = sm.symbol
      WHERE ca.action_type = 'DIVIDEND' AND ca.ex_date = ?`,

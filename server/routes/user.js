@@ -14,7 +14,7 @@ router.get('/stocks', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT us.symbol, us.added_at,
-              sm.company_name, sm.exchange, sm.sector, sm.last_price, sm.price_updated_at
+              sm.company_name, sm.sector, sm.last_price, sm.price_updated_at
        FROM user_stocks us
        JOIN stocks_master sm ON us.symbol = sm.symbol
        WHERE us.user_id = ?
@@ -28,7 +28,6 @@ router.get('/stocks', async (req, res) => {
       added_at: r.added_at,
       stocks_master: {
         company_name:     r.company_name,
-        exchange:         r.exchange,
         sector:           r.sector,
         last_price:       r.last_price,
         price_updated_at: r.price_updated_at,
