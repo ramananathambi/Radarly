@@ -324,7 +324,7 @@
       <!-- Tab: Users -->
       <div class="tab-content active" id="tab-users">
         <div class="filter-bar">
-          <input type="text" id="user-search" placeholder="Search by name or phone…" oninput="debouncedUserSearch()" />
+          <input type="text" id="user-search" placeholder="Search by name, email or phone…" oninput="debouncedUserSearch()" />
           <span class="result-count" id="user-count"></span>
         </div>
         <div id="users-table"><div class="spinner"></div></div>
@@ -598,7 +598,7 @@
           <div class="table-wrap">
             <table>
               <thead><tr>
-                <th>Name</th><th>Phone</th><th>Verified</th><th>Joined</th>
+                <th>Name</th><th>Email</th><th>Phone</th><th>Verified</th><th>Joined</th>
               </tr></thead>
               <tbody>
         `;
@@ -606,6 +606,7 @@
           html += `
             <tr onclick="openUserModal('${u.id}')">
               <td><strong>${u.name || '—'}</strong></td>
+              <td style="font-size:13px;color:var(--text-secondary);">${u.email || '—'}</td>
               <td>${u.phone || '—'}</td>
               <td><span class="badge ${u.is_verified ? 'badge-yes' : 'badge-no'}">${u.is_verified ? 'Yes' : 'No'}</span></td>
               <td style="font-size:13px;">${formatDate(u.created_at?.split('T')[0])}</td>
@@ -669,7 +670,8 @@
             <div class="user-avatar-lg">${initials}</div>
             <div class="user-meta-info">
               <h4>${user.name || '—'}</h4>
-              <p>${user.phone || 'No phone'} · Joined ${formatDate(user.created_at?.split('T')[0])}</p>
+              <p>${user.email || 'No email'}</p>
+              <p style="margin-top:2px;">${user.phone || 'No phone'} · Joined ${formatDate(user.created_at?.split('T')[0])}</p>
               <p style="margin-top:4px;"><span class="badge ${user.is_verified ? 'badge-yes' : 'badge-no'}">${user.is_verified ? 'Verified' : 'Unverified'}</span></p>
             </div>
           </div>

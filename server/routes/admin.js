@@ -95,21 +95,22 @@ router.get('/users', requireAdmin, async (req, res) => {
 
   try {
     let countQuery = 'SELECT COUNT(*) AS total FROM users';
-    let dataQuery  = 'SELECT id, name, phone, is_verified, created_at FROM users';
+    let dataQuery  = 'SELECT id, name, phone, email, is_verified, created_at FROM users';
     const params   = [];
 
     if (search) {
       const like = `%${search}%`;
-      countQuery += ' WHERE name LIKE ? OR phone LIKE ?';
-      dataQuery  += ' WHERE name LIKE ? OR phone LIKE ?';
+      countQuery += ' WHERE name LIKE ? OR phone LIKE ? OR email LIKE ?';
+      dataQuery  += ' WHERE name LIKE ? OR phone LIKE ? OR email LIKE ?';
       params.push(like, like);
     }
 
     dataQuery += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
 
-    const [countRows] = await pool.execute(countQuery, params.length ? [params[0], params[1]] : []);
+    const searchParams = search ? [params[0], params[1], params[2]] : [];
+    const [countRows] = await pool.execute(countQuery, searchParams);
     const total = countRows[0].total;
-    const [rows] = await pool.execute(dataQuery, params);
+    const [rows] = await pool.execute(dataQuery, searchParams);
 
     rows.forEach(r => { r.is_verified = !!r.is_verified; });
     res.json({ users: rows, total, page, totalPages: Math.ceil(total / limit) });
@@ -124,7 +125,7 @@ router.get('/users/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     const [[user]] = await pool.execute(
-      'SELECT id, name, phone, is_verified, created_at FROM users WHERE id = ?', [id]
+      'SELECT id, name, phone, email, is_verified, created_at FROM users WHERE id = ?', [id]
     );
     if (!user) return res.status(404).json({ error: 'User not found' });
 
