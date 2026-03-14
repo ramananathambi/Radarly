@@ -324,7 +324,7 @@
 
 /* Feature Cards */
 .lp-why-bg {
-  background: #fff;
+  background: var(--bg);
 }
 .lp-features {
   display: grid;
