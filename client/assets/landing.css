@@ -313,43 +313,48 @@
   margin: 0;
 }
 
-/* Feature Rows */
+/* Feature Cards */
 .lp-why-bg {
   background: #fff;
 }
 .lp-features {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 40px 48px;
+  gap: 24px;
   max-width: 800px;
-  margin: 40px auto 0;
+  margin: 0 auto;
 }
-.lp-feature-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
+.lp-feature-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.lp-feature-card:hover {
+  box-shadow: 0 16px 40px rgba(0,0,0,0.10);
+  transform: translateY(-4px);
 }
 .lp-feature-icon {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   background: #fef2f2;
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  margin-bottom: 16px;
 }
-.lp-feature-row h3 {
+.lp-feature-card h3 {
   font-size: 18px;
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: var(--text);
 }
-.lp-feature-row p {
+.lp-feature-card p {
   font-size: 16px;
   color: var(--text-secondary);
   line-height: 1.6;
-  margin: 0;
 }
 
 /* Pricing */
