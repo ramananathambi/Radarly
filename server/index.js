@@ -56,6 +56,7 @@ app.use('/api/dividends', require('./routes/dividends'));
 app.use('/api/events',    require('./routes/events'));
 app.use('/api/webhooks',  require('./routes/webhooks'));
 app.use('/api/admin',     require('./routes/admin'));
+app.use('/api/contact',   require('./routes/contact'));
 
 // Catch-all — serve index.html for client-side routing
 app.get('*', (req, res) => {

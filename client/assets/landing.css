@@ -594,4 +594,69 @@
   .lp-final-cta h2 {
     font-size: 28px;
   }
+  .lp-contact-row {
+    flex-direction: column;
+  }
 }
+
+/* ── Contact Section ─────────────────────────────────────────────────────── */
+.lp-contact {
+  padding: 80px 24px;
+  background: #fff;
+}
+.lp-contact-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+.lp-contact-inner h2 {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.lp-contact-form {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+.lp-contact-row {
+  display: flex;
+  gap: 14px;
+}
+.lp-contact-row input,
+.lp-contact-form input,
+.lp-contact-form textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.lp-contact-row input:focus,
+.lp-contact-form input:focus,
+.lp-contact-form textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.lp-contact-form textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+.lp-contact-btn {
+  align-self: flex-start;
+  padding: 12px 28px;
+}
+.lp-contact-status {
+  font-size: 14px;
+  min-height: 20px;
+  margin: 0;
+}
+.lp-contact-success { color: #16a34a; }
+.lp-contact-error   { color: var(--accent); }

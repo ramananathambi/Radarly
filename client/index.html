@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Radarly — Stock Alerts for Indian Investors</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
-  <link rel="stylesheet" href="/assets/style.css?v=3" />
-  <link rel="stylesheet" href="/assets/landing.css?v=3" />
+  <link rel="stylesheet" href="/assets/style.css?v=4" />
+  <link rel="stylesheet" href="/assets/landing.css?v=4" />
 </head>
 <body>
   <nav class="nav">
@@ -172,6 +172,23 @@
     </div>
   </section>
 
+  <!-- Contact / Feedback Section -->
+  <section class="lp-contact">
+    <div class="lp-contact-inner scroll-fade">
+      <h2>We'd love to hear from you</h2>
+      <p class="lp-section-subtitle">Questions, feedback, or suggestions — drop us a message and we'll reply within a day.</p>
+      <form class="lp-contact-form" id="contactForm">
+        <div class="lp-contact-row">
+          <input type="text" id="contactName" placeholder="Your name" required />
+          <input type="email" id="contactEmail" placeholder="Your email" required />
+        </div>
+        <textarea id="contactMessage" placeholder="Your message" rows="4" required></textarea>
+        <button type="submit" class="btn btn-primary lp-contact-btn">Send Message</button>
+        <p class="lp-contact-status" id="contactStatus"></p>
+      </form>
+    </div>
+  </section>
+
   <footer class="site-footer">
     <div>Built in Chennai ❤️ for India 🇮🇳</div>
     <div style="margin-top:8px; opacity:0.6; font-size:12px;">© 2026 Radarly. All rights reserved.</div>
@@ -234,6 +251,42 @@
       });
     }, { threshold: 0.12 });
     document.querySelectorAll('.scroll-fade, .scroll-fade-children').forEach(el => observer.observe(el));
+
+    // ── Contact form submission ───────────────────────────────────────────
+    document.getElementById('contactForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const status = document.getElementById('contactStatus');
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      status.textContent = '';
+      status.className = 'lp-contact-status';
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: document.getElementById('contactName').value,
+            email: document.getElementById('contactEmail').value,
+            message: document.getElementById('contactMessage').value,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          status.textContent = 'Message sent! We\'ll get back to you soon.';
+          status.classList.add('lp-contact-success');
+          e.target.reset();
+        } else {
+          status.textContent = data.error || 'Something went wrong. Please try again.';
+          status.classList.add('lp-contact-error');
+        }
+      } catch {
+        status.textContent = 'Something went wrong. Please try again.';
+        status.classList.add('lp-contact-error');
+      }
+      btn.disabled = false;
+      btn.textContent = 'Send Message';
+    });
   </script>
 </body>
 </html>
