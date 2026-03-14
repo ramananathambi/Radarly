@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function sendEmail({ to, subject, html }) {
+async function sendEmail({ to, subject, html, attachments }) {
   if (process.env.DEV_MODE === 'true') {
     console.log(`[DEV] Email to ${to} | Subject: ${subject}`);
     return;
@@ -20,6 +20,7 @@ async function sendEmail({ to, subject, html }) {
     to,
     subject,
     html,
+    ...(attachments ? { attachments } : {}),
   });
 }
 
