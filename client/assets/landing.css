@@ -340,15 +340,15 @@
   flex-shrink: 0;
 }
 .lp-feature-row h3 {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   color: var(--text);
 }
 .lp-feature-row p {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
 }
 
