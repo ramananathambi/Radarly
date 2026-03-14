@@ -164,9 +164,9 @@
       transition: background 0.2s;
     }
 
-    /* Hide until session check completes */
-    body { visibility: hidden; }
-    body.ready { visibility: visible; }
+    /* Hide until session check completes — fade in for mobile smoothness */
+    body { opacity: 0; }
+    body.ready { opacity: 1; transition: opacity 0.22s ease; }
   </style>
 </head>
 <body>
