@@ -53,6 +53,62 @@
       font-weight: 400;
       font-size: 12px;
     }
+
+    /* ── Skeleton loading shimmer ────────────────────────── */
+    @keyframes shimmer {
+      0%   { background-position: -600px 0; }
+      100% { background-position:  600px 0; }
+    }
+    .sk-table { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .sk-row { display: flex; align-items: center; gap: 16px; padding: 16px 14px; border-bottom: 1px solid var(--border); }
+    .sk-row:last-child { border-bottom: none; }
+    .sk-cell {
+      height: 13px; border-radius: 6px; flex-shrink: 0;
+      background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+    }
+    .sk-xs  { width: 48px; }
+    .sk-sm  { width: 80px; }
+    .sk-md  { width: 120px; }
+    .sk-lg  { flex: 1; }
+
+    /* ── Entrance animations ─────────────────────────────── */
+    @keyframes dash-in {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .page-title       { animation: dash-in 0.55s ease forwards; }
+    .selected-count   { animation: dash-in 0.5s 0.08s ease backwards; }
+    .filters          { animation: dash-in 0.5s 0.15s ease backwards; }
+    #results-info     { animation: dash-in 0.5s 0.22s ease forwards; opacity: 0; }
+    #stocks-container { animation: dash-in 0.5s 0.28s ease forwards; opacity: 0; }
+    #pagination       { animation: dash-in 0.5s 0.34s ease forwards; opacity: 0; }
+
+    /* ── Row hover — left accent border ──────────────────── */
+    table tbody tr { transition: background 0.15s; }
+    table tbody tr:hover td { background: rgba(233,50,68,0.04) !important; }
+    table tbody tr:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+    /* ── Row entrance animation ──────────────────────────── */
+    @keyframes row-in {
+      from { opacity: 0; transform: translateX(-6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .stock-row-anim {
+      animation: row-in 0.3s ease forwards;
+      opacity: 0;
+    }
+
+    /* ── Refresh button spin ─────────────────────────────── */
+    @keyframes spin-once {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    #refresh-btn.spinning .refresh-icon {
+      display: inline-block;
+      animation: spin-once 0.65s ease;
+    }
   </style>
 </head>
 <body>
@@ -115,6 +171,21 @@
     let sortDirection = 'asc';
     let currentStocksData = [];
 
+    // ── Skeleton loader ─────────────────────────────────────────────────────
+    function buildSkeleton(rows = 10) {
+      const widths = [
+        ['xs','lg','sm','md','xs'],
+        ['xs','lg','md','sm','xs'],
+        ['sm','lg','xs','md','xs'],
+      ];
+      let html = '<div class="sk-table">';
+      for (let i = 0; i < rows; i++) {
+        const w = widths[i % widths.length];
+        html += `<div class="sk-row">${w.map(c => `<div class="sk-cell sk-${c}"></div>`).join('')}</div>`;
+      }
+      return html + '</div>';
+    }
+
     (async () => {
       const user = await requireLogin();
       if (!user) return;
@@ -168,7 +239,7 @@
     async function loadStocks() {
       isSearchMode = false;
       const container = document.getElementById('stocks-container');
-      container.innerHTML = '<div class="spinner"></div>';
+      container.innerHTML = buildSkeleton();
 
       const sector = document.getElementById('filter-sector').value;
 
@@ -187,7 +258,7 @@
     async function searchStocks(query) {
       isSearchMode = true;
       const container = document.getElementById('stocks-container');
-      container.innerHTML = '<div class="spinner"></div>';
+      container.innerHTML = buildSkeleton(5);
 
       try {
         const data = await api('GET', `/api/stocks/search?q=${encodeURIComponent(query)}`);
@@ -258,6 +329,12 @@
 
       html += '</tbody></table></div>';
       container.innerHTML = html;
+
+      // Stagger-animate each row as it appears
+      container.querySelectorAll('tbody tr').forEach((row, i) => {
+        row.classList.add('stock-row-anim');
+        row.style.animationDelay = `${i * 0.03}s`;
+      });
     }
 
     function renderPagination(page, totalPages, total) {
