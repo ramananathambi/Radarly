@@ -7,65 +7,250 @@
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   <link rel="stylesheet" href="/assets/style.css?v=5" />
   <style>
-    .login-box {
-      max-width: 380px;
-      margin: 80px auto;
-      padding: 32px;
+    /* ── Animations ──────────────────────────────────────────────── */
+    @keyframes admin-in {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
+    @keyframes tab-fade {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .anim { opacity: 0; animation: admin-in 0.35s ease forwards; }
+    .anim-1 { animation-delay: 0.05s; }
+    .anim-2 { animation-delay: 0.10s; }
+    .anim-3 { animation-delay: 0.15s; }
+    .anim-4 { animation-delay: 0.20s; }
+    .anim-5 { animation-delay: 0.25s; }
+    .anim-6 { animation-delay: 0.30s; }
+
+    /* ── Login box ───────────────────────────────────────────────── */
+    .login-box { max-width: 380px; margin: 80px auto; padding: 32px; }
+
+    /* ── Stats grid ──────────────────────────────────────────────── */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      margin-bottom: 32px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
     }
-    .stat-card { text-align: center; padding: 20px; }
-    .stat-value { font-size: 28px; font-weight: 800; color: var(--accent); }
-    .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
-    .action-bar {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 32px;
-      flex-wrap: wrap;
+    .stat-card {
+      text-align: center;
+      padding: 20px 16px;
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
     }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,0.09); }
+    .stat-value { font-size: 30px; font-weight: 800; color: var(--accent); line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 6px; }
+    .stat-danger .stat-value { color: var(--danger); }
+
+    /* ── Scheduler status ────────────────────────────────────────── */
+    .scheduler-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .sched-card {
+      padding: 16px 18px;
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+    .sched-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,0.09); }
+    .sched-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .sched-schedule { font-size: 11px; color: var(--text-secondary); margin-bottom: 10px; }
+    .sched-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+    .sched-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .sched-dot.success { background: var(--success); }
+    .sched-dot.failed  { background: var(--danger); }
+    .sched-dot.running { background: var(--warning); }
+    .sched-dot.never   { background: var(--border); }
+    .sched-section-title {
+      font-size: 12px; font-weight: 700; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    /* ── Chart ───────────────────────────────────────────────────── */
+    .chart-card { padding: 20px 24px; margin-bottom: 24px; }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .chart-title { font-size: 13px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; }
+    .chart-col  { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; justify-content: flex-end; }
+    .chart-val  { font-size: 10px; color: var(--text-secondary); min-height: 13px; font-weight: 600; }
+    .chart-bar  { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 3px; opacity: 0.75; transition: opacity 0.2s, transform 0.2s; cursor: default; }
+    .chart-bar:hover { opacity: 1; transform: scaleY(1.04); transform-origin: bottom; }
+    .chart-lbl  { font-size: 9px; color: var(--text-secondary); white-space: nowrap; }
+
+    /* ── Action bar ──────────────────────────────────────────────── */
+    .action-bar { display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap; }
+
+    /* ── Tabs ────────────────────────────────────────────────────── */
     .tab-bar {
-      display: flex;
-      gap: 0;
+      display: flex; gap: 0; flex-wrap: wrap;
       border-bottom: 2px solid var(--border);
       margin-bottom: 20px;
     }
     .tab-btn {
-      padding: 10px 20px;
-      border: none;
-      background: none;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -2px;
-      transition: all 0.15s;
+      padding: 10px 18px; border: none; background: none;
+      font-size: 13px; font-weight: 600; color: var(--text-secondary);
+      cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+      transition: all 0.15s; white-space: nowrap;
     }
     .tab-btn:hover { color: var(--text); }
     .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
     .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    .status-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
+    .tab-content.active { display: block; animation: tab-fade 0.25s ease; }
+
+    /* ── Status badge ────────────────────────────────────────────── */
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 12px;
+      font-size: 11px; font-weight: 600;
     }
-    .status-sent { background: #e6f4ea; color: var(--success); }
-    .status-failed { background: #fce8e6; color: var(--danger); }
+    .badge-sent    { background: #e6f4ea; color: var(--success); }
+    .badge-failed  { background: #fce8e6; color: var(--danger); }
+    .badge-yes     { background: #e6f4ea; color: var(--success); }
+    .badge-no      { background: #f3f4f6; color: var(--text-secondary); }
+    .badge-on      { background: #e6f4ea; color: var(--success); }
+    .badge-off     { background: #f3f4f6; color: var(--text-secondary); }
+
+    /* ── Search & filter bar ─────────────────────────────────────── */
+    .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .filter-bar input, .filter-bar select {
+      padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 13px; color: var(--text); background: #fff; outline: none;
+      transition: border-color 0.15s;
+    }
+    .filter-bar input:focus, .filter-bar select:focus { border-color: var(--accent); }
+    .filter-bar input { min-width: 220px; }
+    .result-count { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+
+    /* ── Alert Types ─────────────────────────────────────────────── */
+    .types-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .type-card {
+      padding: 18px 20px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+    .type-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,0.09); }
+    .type-info { flex: 1; }
+    .type-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .type-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+    /* Toggle switch */
+    .toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer; inset: 0;
+      background: var(--border); border-radius: 22px;
+      transition: background 0.2s;
+    }
+    .toggle-slider:before {
+      content: ''; position: absolute; width: 16px; height: 16px;
+      left: 3px; bottom: 3px; background: #fff; border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--success); }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(18px); }
+
+    /* ── Watchlist stats ─────────────────────────────────────────── */
+    .bar-mini { display: inline-block; height: 6px; border-radius: 3px; background: var(--accent); opacity: 0.6; vertical-align: middle; }
+
+    /* ── Broadcast ───────────────────────────────────────────────── */
+    .broadcast-wrap { max-width: 560px; }
+    .broadcast-wrap textarea {
+      width: 100%; padding: 14px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 14px; font-family: inherit; resize: vertical; min-height: 120px;
+      outline: none; transition: border-color 0.15s; color: var(--text);
+    }
+    .broadcast-wrap textarea:focus { border-color: var(--accent); }
+    .broadcast-meta { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+    .recipient-info { font-size: 13px; color: var(--text-secondary); }
+    .char-count { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+
+    /* ── User modal ──────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; padding: 20px;
+      animation: admin-in 0.2s ease;
+    }
+    .modal-box {
+      background: #fff; border-radius: 14px; width: 100%; max-width: 560px;
+      max-height: 85vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      animation: admin-in 0.25s ease;
+    }
+    .modal-head {
+      padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: #fff;
+    }
+    .modal-head h3 { font-size: 16px; font-weight: 700; }
+    .modal-close {
+      width: 30px; height: 30px; border-radius: 50%; border: none;
+      background: var(--border); cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .modal-close:hover { background: #d1d5db; }
+    .modal-body { padding: 20px 24px; }
+    .modal-section { margin-bottom: 20px; }
+    .modal-section-title {
+      font-size: 11px; font-weight: 700; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+    }
+    .user-avatar-lg {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700; flex-shrink: 0;
+    }
+    .user-meta { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+    .user-meta-info h4 { font-size: 16px; font-weight: 700; }
+    .user-meta-info p { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .chip-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 12px; font-weight: 600;
+      background: #f3f4f6; color: var(--text);
+    }
+    .danger-btn {
+      background: none; border: 1.5px solid var(--danger); color: var(--danger);
+      padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .danger-btn:hover { background: var(--danger); color: #fff; }
+
+    /* ── Table enhancements ──────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+    .table-wrap table { border-radius: 10px; overflow: hidden; }
+    tbody tr { cursor: pointer; transition: background 0.15s; }
+    tbody tr:hover { background: #fafafa; }
+    .pagination { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+    .pagination button { padding: 6px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; cursor: pointer; }
+    .pagination button:disabled { opacity: 0.4; cursor: default; }
+    .pagination button:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+    .pagination span { font-size: 13px; color: var(--text-secondary); margin: 0 4px; }
+
+    /* ── Section label ───────────────────────────────────────────── */
+    .section-label {
+      font-size: 12px; font-weight: 700; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
   <nav class="nav">
-    <a class="nav-brand" href="/admin.html"><img src="/assets/logo-nav.png" alt="Radarly" class="nav-logo"> Admin</a>
+    <a class="nav-brand" href="/admin.html">
+      <img src="/assets/logo-nav.png" alt="Radarly" class="nav-logo"> Admin
+    </a>
     <div class="nav-links">
       <a href="/admin.html" class="active">Admin</a>
-      <a href="#" id="admin-logout" style="color:var(--danger)">Logout</a>
+      <a href="#" id="admin-logout" class="logout-link">Logout</a>
     </div>
   </nav>
 
@@ -74,51 +259,131 @@
 
     <!-- Login screen -->
     <div id="login-screen">
-      <div class="card login-box">
-        <h2 style="margin-bottom:16px;">Admin Login</h2>
+      <div class="card login-box anim anim-1">
+        <h2 style="margin-bottom:4px;">Admin Login</h2>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">Radarly internal dashboard</p>
         <div class="form-group">
           <label>Admin Password</label>
           <input type="password" id="admin-password" placeholder="Enter admin password" />
         </div>
-        <button class="btn btn-primary" style="width:100%;" onclick="adminLogin()">Login</button>
+        <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="adminLogin()">Login</button>
       </div>
     </div>
 
-    <!-- Admin dashboard (hidden until login) -->
+    <!-- Admin dashboard -->
     <div id="admin-dashboard" style="display:none;">
-      <h1 class="page-title">Admin Dashboard</h1>
+      <h1 class="page-title anim anim-1">Admin Dashboard</h1>
 
       <!-- Stats -->
       <div class="stats-grid" id="stats-grid">
         <div class="card stat-card"><div class="spinner" style="margin:0 auto;"></div></div>
       </div>
 
+      <!-- Scheduler Status -->
+      <p class="section-label anim anim-2">Scheduler Status</p>
+      <div class="scheduler-grid anim anim-2" id="scheduler-grid">
+        <div class="card sched-card"><div class="spinner" style="margin:0 auto;"></div></div>
+      </div>
+
+      <!-- Alerts Chart -->
+      <div class="card chart-card anim anim-3">
+        <div class="chart-header">
+          <span class="chart-title">Alerts Sent — Last 14 Days</span>
+        </div>
+        <div id="alerts-chart"><div class="spinner"></div></div>
+      </div>
+
       <!-- Action buttons -->
-      <div class="action-bar">
-        <button class="btn btn-primary" id="btn-fetch" onclick="triggerFetch()">Run Data Fetch (NSE)</button>
-        <button class="btn btn-outline" id="btn-alert" onclick="triggerAlert()">Run Alert Engine</button>
-        <button class="btn btn-outline" id="btn-seed" onclick="triggerSeedStocks()">Seed All Stocks</button>
-        <button class="btn btn-outline" onclick="loadAll()">Refresh</button>
+      <div class="action-bar anim anim-4">
+        <button class="btn btn-primary" id="btn-fetch" onclick="triggerFetch()">⬆ Run Data Fetch</button>
+        <button class="btn btn-outline" id="btn-alert" onclick="triggerAlert()">🔔 Run Alert Engine</button>
+        <button class="btn btn-outline" id="btn-seed" onclick="triggerSeedStocks()">🌱 Seed All Stocks</button>
+        <button class="btn btn-outline" onclick="loadAll()">↺ Refresh</button>
       </div>
 
       <!-- Tabs -->
-      <div class="tab-bar">
+      <div class="tab-bar anim anim-5">
         <button class="tab-btn active" onclick="switchTab('users')">Users</button>
         <button class="tab-btn" onclick="switchTab('alerts')">Alert Log</button>
         <button class="tab-btn" onclick="switchTab('actions')">Corporate Actions</button>
+        <button class="tab-btn" onclick="switchTab('types')">Alert Types</button>
+        <button class="tab-btn" onclick="switchTab('watchlist')">Watchlist Stats</button>
+        <button class="tab-btn" onclick="switchTab('broadcast')">Broadcast</button>
       </div>
 
+      <!-- Tab: Users -->
       <div class="tab-content active" id="tab-users">
-        <div class="spinner"></div>
+        <div class="filter-bar">
+          <input type="text" id="user-search" placeholder="Search by name or phone…" oninput="debouncedUserSearch()" />
+          <span class="result-count" id="user-count"></span>
+        </div>
+        <div id="users-table"><div class="spinner"></div></div>
       </div>
+
+      <!-- Tab: Alert Log -->
       <div class="tab-content" id="tab-alerts">
-        <div class="spinner"></div>
+        <div class="filter-bar">
+          <select id="alert-status-filter" onchange="alertsPage=1;loadAlerts()">
+            <option value="">All Statuses</option>
+            <option value="sent">Sent Only</option>
+            <option value="failed">Failed Only</option>
+          </select>
+          <span class="result-count" id="alert-count"></span>
+        </div>
+        <div id="alerts-table"><div class="spinner"></div></div>
       </div>
+
+      <!-- Tab: Corporate Actions -->
       <div class="tab-content" id="tab-actions">
-        <div class="spinner"></div>
+        <div class="filter-bar">
+          <select id="action-type-filter" onchange="actionsPage=1;loadActions()">
+            <option value="">All Types</option>
+            <option value="DIVIDEND">Dividend</option>
+            <option value="BONUS">Bonus</option>
+            <option value="SPLIT">Split</option>
+            <option value="RIGHTS">Rights</option>
+            <option value="IPO">IPO</option>
+          </select>
+          <span class="result-count" id="action-count"></span>
+        </div>
+        <div id="actions-table"><div class="spinner"></div></div>
+      </div>
+
+      <!-- Tab: Alert Types -->
+      <div class="tab-content" id="tab-types">
+        <div class="types-grid" id="types-grid"><div class="spinner"></div></div>
+      </div>
+
+      <!-- Tab: Watchlist Stats -->
+      <div class="tab-content" id="tab-watchlist">
+        <div id="watchlist-table"><div class="spinner"></div></div>
+      </div>
+
+      <!-- Tab: Broadcast -->
+      <div class="tab-content" id="tab-broadcast">
+        <div class="broadcast-wrap">
+          <div class="card" style="padding:24px;">
+            <h3 style="margin-bottom:4px;">Send Broadcast Message</h3>
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">
+              Sends a WhatsApp message to all verified users with a phone number.
+            </p>
+            <textarea id="broadcast-msg" placeholder="Type your message here…" oninput="updateCharCount()"></textarea>
+            <div class="broadcast-meta">
+              <span class="recipient-info" id="recipient-info">Loading recipients…</span>
+              <span class="char-count" id="char-count">0 chars</span>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+              <button class="btn btn-outline" onclick="previewBroadcast()">Preview Recipients</button>
+              <button class="btn btn-primary" id="btn-broadcast" onclick="sendBroadcast()">Send to All</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- User detail modal -->
+  <div id="user-modal" style="display:none;"></div>
 
   <footer class="site-footer">
     <div>Built in Chennai ❤️ for India 🇮🇳</div>
@@ -129,21 +394,19 @@
   <script src="/assets/supabase-client.js"></script>
   <script src="/assets/app.js"></script>
   <script>
-    let adminToken = localStorage.getItem('admin_token') || '';
-    let usersPage = 1;
-    let alertsPage = 1;
+    let adminToken  = localStorage.getItem('admin_token') || '';
+    let usersPage   = 1;
+    let alertsPage  = 1;
     let actionsPage = 1;
+    let userSearchTimer = null;
 
-    // Check if already logged in
-    if (adminToken) {
-      showDashboard();
-    }
+    // Auto-login if token stored
+    if (adminToken) showDashboard();
 
-    document.getElementById('admin-password').addEventListener('keydown', (e) => {
+    document.getElementById('admin-password').addEventListener('keydown', e => {
       if (e.key === 'Enter') adminLogin();
     });
-
-    document.getElementById('admin-logout').addEventListener('click', (e) => {
+    document.getElementById('admin-logout').addEventListener('click', e => {
       e.preventDefault();
       localStorage.removeItem('admin_token');
       adminToken = '';
@@ -152,10 +415,15 @@
       document.getElementById('admin-password').value = '';
     });
 
+    // ─── Auth ────────────────────────────────────────────────────────────────
+
     async function adminApi(method, path, body) {
-      const opts = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` } };
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` }
+      };
       if (body) opts.body = JSON.stringify(body);
-      const res = await fetch(path, opts);
+      const res  = await fetch(path, opts);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Request failed');
       return data;
@@ -182,138 +450,480 @@
     }
 
     async function loadAll() {
-      await Promise.all([loadStats(), loadUsers(), loadAlerts(), loadActions()]);
+      await Promise.all([loadStats(), loadScheduler(), loadChart(), loadUsers(), loadAlerts(), loadActions(), loadAlertTypes(), loadWatchlistStats(), loadRecipientCount()]);
     }
+
+    // ─── Stats ───────────────────────────────────────────────────────────────
 
     async function loadStats() {
       try {
         const s = await adminApi('GET', '/api/admin/stats');
-        document.getElementById('stats-grid').innerHTML = `
-          <div class="card stat-card"><div class="stat-value">${s.total_users}</div><div class="stat-label">Total Users</div></div>
-          <div class="card stat-card"><div class="stat-value">${s.total_stocks}</div><div class="stat-label">Stocks in Master</div></div>
-          <div class="card stat-card"><div class="stat-value">${s.alerts_sent_today}</div><div class="stat-label">Alerts Today</div></div>
-          <div class="card stat-card"><div class="stat-value">${s.alerts_sent_total}</div><div class="stat-label">Alerts Total</div></div>
-          <div class="card stat-card"><div class="stat-value">${s.actions_fetched_today}</div><div class="stat-label">Actions Fetched Today</div></div>
+        const grid = document.getElementById('stats-grid');
+        grid.innerHTML = `
+          <div class="card stat-card anim anim-1">
+            <div class="stat-value">${s.total_users}</div>
+            <div class="stat-label">Total Users</div>
+          </div>
+          <div class="card stat-card anim anim-2">
+            <div class="stat-value">${s.total_stocks.toLocaleString()}</div>
+            <div class="stat-label">Stocks in Master</div>
+          </div>
+          <div class="card stat-card anim anim-3">
+            <div class="stat-value">${s.alerts_sent_today}</div>
+            <div class="stat-label">Alerts Today</div>
+          </div>
+          <div class="card stat-card anim anim-4">
+            <div class="stat-value">${s.alerts_sent_total}</div>
+            <div class="stat-label">Alerts Total</div>
+          </div>
+          <div class="card stat-card anim anim-5">
+            <div class="stat-value">${s.actions_fetched_today.toLocaleString()}</div>
+            <div class="stat-label">Actions Fetched Today</div>
+          </div>
+          <div class="card stat-card stat-danger anim anim-6">
+            <div class="stat-value">${s.alerts_failed_total}</div>
+            <div class="stat-label">Alerts Failed (All Time)</div>
+          </div>
         `;
       } catch (err) {
-        document.getElementById('stats-grid').innerHTML = `<div class="card" style="color:var(--danger);">Failed to load stats</div>`;
+        document.getElementById('stats-grid').innerHTML =
+          `<div class="card" style="color:var(--danger);">Failed to load stats</div>`;
       }
     }
 
-    // ─── Users tab ────────────────────────────────────────────────────────
+    // ─── Scheduler Status ────────────────────────────────────────────────────
+
+    async function loadScheduler() {
+      const grid = document.getElementById('scheduler-grid');
+      try {
+        const data = await adminApi('GET', '/api/admin/scheduler');
+        const schedules = {
+          'NSE Fetch (Morning)': '8:00 AM IST daily',
+          'Alert Engine':        '9:30 AM IST daily',
+          'NSE Fetch (Evening)': '6:00 PM IST daily',
+        };
+        let html = '';
+        for (const [name, job] of Object.entries(data.jobs)) {
+          const status = job ? job.status : 'never';
+          const dotClass = status === 'success' ? 'success' : status === 'failed' ? 'failed' : status === 'running' ? 'running' : 'never';
+          const lastRun = job
+            ? new Date(job.started_at + 'Z').toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : 'Never ran';
+          const msg = job?.message ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${job.message}">${job.message}</div>` : '';
+          html += `
+            <div class="card sched-card">
+              <div class="sched-title">${name}</div>
+              <div class="sched-schedule">${schedules[name] || ''}</div>
+              <div class="sched-row">
+                <div class="sched-dot ${dotClass}"></div>
+                <span>${status === 'never' ? 'Never ran' : status.charAt(0).toUpperCase() + status.slice(1)}</span>
+              </div>
+              <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Last: ${lastRun}</div>
+              ${msg}
+            </div>
+          `;
+        }
+        grid.innerHTML = html;
+      } catch {
+        grid.innerHTML = `<div class="card sched-card" style="color:var(--text-secondary);">Scheduler log not available yet</div>`;
+      }
+    }
+
+    // ─── Alerts Chart ────────────────────────────────────────────────────────
+
+    async function loadChart() {
+      const wrap = document.getElementById('alerts-chart');
+      try {
+        const { data } = await adminApi('GET', '/api/admin/alerts-chart');
+        // Build last 14 days
+        const days = [];
+        for (let i = 13; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toISOString().split('T')[0];
+          const found = data.find(r => r.date === dateStr);
+          days.push({ date: dateStr, count: found ? Number(found.count) : 0 });
+        }
+        const max = Math.max(...days.map(r => r.count), 1);
+        let html = '<div class="chart-bars">';
+        for (const d of days) {
+          const pct  = Math.round((d.count / max) * 100);
+          const lbl  = new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+          html += `
+            <div class="chart-col">
+              <div class="chart-val">${d.count > 0 ? d.count : ''}</div>
+              <div class="chart-bar" style="height:${Math.max(pct, 3)}%" title="${lbl}: ${d.count} alerts"></div>
+              <div class="chart-lbl">${lbl}</div>
+            </div>
+          `;
+        }
+        html += '</div>';
+        wrap.innerHTML = html;
+      } catch {
+        wrap.innerHTML = '<div style="font-size:13px;color:var(--text-secondary);">Chart unavailable</div>';
+      }
+    }
+
+    // ─── Users ───────────────────────────────────────────────────────────────
+
+    function debouncedUserSearch() {
+      clearTimeout(userSearchTimer);
+      userSearchTimer = setTimeout(() => { usersPage = 1; loadUsers(); }, 350);
+    }
 
     async function loadUsers(page) {
       if (page) usersPage = page;
-      const container = document.getElementById('tab-users');
+      const container = document.getElementById('users-table');
+      const search = document.getElementById('user-search')?.value.trim() || '';
       container.innerHTML = '<div class="spinner"></div>';
       try {
-        const data = await adminApi('GET', `/api/admin/users?page=${usersPage}`);
+        const url = `/api/admin/users?page=${usersPage}${search ? `&search=${encodeURIComponent(search)}` : ''}`;
+        const data = await adminApi('GET', url);
+        document.getElementById('user-count').textContent = `${data.total} users`;
         if (data.users.length === 0) {
-          container.innerHTML = '<div class="card" style="color:var(--text-secondary);">No users yet.</div>';
+          container.innerHTML = '<div class="card" style="color:var(--text-secondary);padding:20px;">No users found.</div>';
           return;
         }
-        let html = '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Verified</th><th>Joined</th></tr></thead><tbody>';
+        let html = `
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Name</th><th>Phone</th><th>Verified</th><th>Joined</th>
+              </tr></thead>
+              <tbody>
+        `;
         for (const u of data.users) {
-          html += `<tr>
-            <td>${u.name || '—'}</td>
-            <td>${u.phone || '—'}</td>
-            <td>${u.is_verified ? '<span style="color:var(--success);">Yes</span>' : 'No'}</td>
-            <td>${formatDate(u.created_at?.split('T')[0])}</td>
-          </tr>`;
+          html += `
+            <tr onclick="openUserModal('${u.id}')">
+              <td><strong>${u.name || '—'}</strong></td>
+              <td>${u.phone || '—'}</td>
+              <td><span class="badge ${u.is_verified ? 'badge-yes' : 'badge-no'}">${u.is_verified ? 'Yes' : 'No'}</span></td>
+              <td style="font-size:13px;">${formatDate(u.created_at?.split('T')[0])}</td>
+            </tr>
+          `;
         }
         html += '</tbody></table></div>';
-        html += renderAdminPagination(data.page, data.totalPages, 'loadUsers');
+        html += renderPagination(data.page, data.totalPages, 'loadUsers');
         container.innerHTML = html;
       } catch (err) {
         container.innerHTML = `<div class="card" style="color:var(--danger);">Error: ${err.message}</div>`;
       }
     }
 
-    // ─── Alert Log tab ──────────────────────────────────────────────────
+    // ─── User Detail Modal ───────────────────────────────────────────────────
+
+    async function openUserModal(id) {
+      const modal = document.getElementById('user-modal');
+      modal.style.display = 'flex';
+      modal.innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeUserModal()">
+          <div class="modal-box">
+            <div class="modal-head">
+              <h3>User Details</h3>
+              <button class="modal-close" onclick="closeUserModal()">✕</button>
+            </div>
+            <div class="modal-body"><div class="spinner"></div></div>
+          </div>
+        </div>
+      `;
+      try {
+        const d = await adminApi('GET', `/api/admin/users/${id}`);
+        const { user, watchlist, prefs, alertHistory } = d;
+        const initials = (user.name || '?').split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+
+        const prefHtml = prefs.length === 0
+          ? '<span style="color:var(--text-secondary);font-size:13px;">No preferences set</span>'
+          : prefs.map(p => `
+              <div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px;">
+                <span class="badge ${p.is_enabled ? 'badge-on' : 'badge-off'}">${p.is_enabled ? 'ON' : 'OFF'}</span>
+                <span><strong>${p.alert_type}</strong> — ${p.scope === 'all_stocks' ? 'All Stocks' : 'My Watchlist'}</span>
+              </div>
+            `).join('');
+
+        const watchHtml = watchlist.length === 0
+          ? '<span style="color:var(--text-secondary);font-size:13px;">Watchlist is empty</span>'
+          : `<div class="chip-list">${watchlist.map(s => `<span class="chip">${s.symbol}</span>`).join('')}</div>`;
+
+        const histHtml = alertHistory.length === 0
+          ? '<span style="color:var(--text-secondary);font-size:13px;">No alerts sent yet</span>'
+          : alertHistory.map(a => `
+              <div style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:6px;">
+                <span class="badge ${a.status === 'sent' ? 'badge-sent' : 'badge-failed'}">${a.status}</span>
+                <strong>${a.symbol}</strong>
+                <span style="color:var(--text-secondary);">${a.alert_type} · ${formatDate(a.event_date)}</span>
+              </div>
+            `).join('');
+
+        modal.querySelector('.modal-body').innerHTML = `
+          <div class="user-meta">
+            <div class="user-avatar-lg">${initials}</div>
+            <div class="user-meta-info">
+              <h4>${user.name || '—'}</h4>
+              <p>${user.phone || 'No phone'} · Joined ${formatDate(user.created_at?.split('T')[0])}</p>
+              <p style="margin-top:4px;"><span class="badge ${user.is_verified ? 'badge-yes' : 'badge-no'}">${user.is_verified ? 'Verified' : 'Unverified'}</span></p>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-title">Alert Preferences</div>
+            ${prefHtml}
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-title">Watchlist (${watchlist.length} stocks)</div>
+            ${watchHtml}
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-title">Recent Alerts (last 20)</div>
+            ${histHtml}
+          </div>
+
+          <div class="modal-section" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
+            <div class="modal-section-title" style="color:var(--danger);">Danger Zone</div>
+            <button class="danger-btn" onclick="deleteUser('${user.id}', '${(user.name || 'this user').replace(/'/g, '')}')">
+              Delete User &amp; All Data
+            </button>
+          </div>
+        `;
+      } catch (err) {
+        modal.querySelector('.modal-body').innerHTML = `<div style="color:var(--danger);">Error: ${err.message}</div>`;
+      }
+    }
+
+    function closeUserModal() {
+      const modal = document.getElementById('user-modal');
+      modal.style.display = 'none';
+      modal.innerHTML = '';
+    }
+
+    async function deleteUser(id, name) {
+      if (!confirm(`Delete "${name}" and all their data? This cannot be undone.`)) return;
+      try {
+        await adminApi('DELETE', `/api/admin/users/${id}`);
+        closeUserModal();
+        showAlert('alert-box', `User "${name}" deleted successfully`, 'success');
+        loadUsers();
+        loadStats();
+      } catch (err) {
+        showAlert('alert-box', `Delete failed: ${err.message}`, 'error');
+      }
+    }
+
+    // ─── Alert Log ───────────────────────────────────────────────────────────
 
     async function loadAlerts(page) {
       if (page) alertsPage = page;
-      const container = document.getElementById('tab-alerts');
+      const container = document.getElementById('alerts-table');
+      const status = document.getElementById('alert-status-filter')?.value || '';
       container.innerHTML = '<div class="spinner"></div>';
       try {
-        const data = await adminApi('GET', `/api/admin/alerts?page=${alertsPage}`);
+        const url = `/api/admin/alerts?page=${alertsPage}${status ? `&status=${status}` : ''}`;
+        const data = await adminApi('GET', url);
+        document.getElementById('alert-count').textContent = `${data.total} records`;
         if (data.alerts.length === 0) {
-          container.innerHTML = '<div class="card" style="color:var(--text-secondary);">No alerts sent yet.</div>';
+          container.innerHTML = '<div class="card" style="color:var(--text-secondary);padding:20px;">No alerts found.</div>';
           return;
         }
-        let html = '<div class="table-wrap"><table><thead><tr><th>User</th><th>Symbol</th><th>Type</th><th>Event Date</th><th>Status</th><th>Sent At</th></tr></thead><tbody>';
+        let html = `
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>User</th><th>Symbol</th><th>Type</th><th>Event Date</th><th>Status</th><th>Sent At</th>
+              </tr></thead>
+              <tbody>
+        `;
         for (const a of data.alerts) {
-          const statusClass = a.status === 'sent' ? 'status-sent' : 'status-failed';
-          html += `<tr>
-            <td>${a.users?.name || '—'}<br><span style="font-size:12px;color:var(--text-secondary);">${a.users?.phone || ''}</span></td>
-            <td><strong>${a.symbol}</strong></td>
-            <td>${a.alert_type}</td>
-            <td>${formatDate(a.event_date)}</td>
-            <td><span class="status-badge ${statusClass}">${a.status}</span></td>
-            <td style="font-size:13px;">${a.sent_at ? new Date(a.sent_at + 'Z').toLocaleString('en-IN') : '—'}</td>
-          </tr>`;
+          html += `
+            <tr>
+              <td>
+                <strong>${a.users?.name || '—'}</strong><br>
+                <span style="font-size:12px;color:var(--text-secondary);">${a.users?.phone || ''}</span>
+              </td>
+              <td><strong>${a.symbol}</strong></td>
+              <td>${a.alert_type}</td>
+              <td>${formatDate(a.event_date)}</td>
+              <td><span class="badge badge-${a.status}">${a.status}</span></td>
+              <td style="font-size:12px;">${a.sent_at ? new Date(a.sent_at + 'Z').toLocaleString('en-IN') : '—'}</td>
+            </tr>
+          `;
         }
         html += '</tbody></table></div>';
-        html += renderAdminPagination(data.page, data.totalPages, 'loadAlerts');
+        html += renderPagination(data.page, data.totalPages, 'loadAlerts');
         container.innerHTML = html;
       } catch (err) {
         container.innerHTML = `<div class="card" style="color:var(--danger);">Error: ${err.message}</div>`;
       }
     }
 
-    // ─── Corporate Actions tab ──────────────────────────────────────────
+    // ─── Corporate Actions ───────────────────────────────────────────────────
 
     async function loadActions(page) {
       if (page) actionsPage = page;
-      const container = document.getElementById('tab-actions');
+      const container = document.getElementById('actions-table');
+      const type = document.getElementById('action-type-filter')?.value || '';
       container.innerHTML = '<div class="spinner"></div>';
       try {
-        const data = await adminApi('GET', `/api/admin/actions?page=${actionsPage}`);
+        const url = `/api/admin/actions?page=${actionsPage}${type ? `&type=${type}` : ''}`;
+        const data = await adminApi('GET', url);
+        document.getElementById('action-count').textContent = `${data.total} records`;
         if (data.actions.length === 0) {
-          container.innerHTML = '<div class="card" style="color:var(--text-secondary);">No corporate actions fetched yet.</div>';
+          container.innerHTML = '<div class="card" style="color:var(--text-secondary);padding:20px;">No corporate actions found.</div>';
           return;
         }
-        let html = '<div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Type</th><th>Ex-Date</th><th>Record Date</th><th>Details</th><th>Fetched</th></tr></thead><tbody>';
+        let html = `
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Symbol</th><th>Type</th><th>Ex-Date</th><th>Record Date</th><th>Details</th><th>Fetched</th>
+              </tr></thead>
+              <tbody>
+        `;
         for (const a of data.actions) {
           const amount = a.details?.amount ? `₹${a.details.amount}` : '—';
-          html += `<tr>
-            <td><strong>${a.symbol}</strong></td>
-            <td>${a.action_type}</td>
-            <td>${formatDate(a.ex_date)}</td>
-            <td>${formatDate(a.record_date)}</td>
-            <td>${amount}</td>
-            <td style="font-size:13px;">${a.last_fetched ? formatDate(a.last_fetched.split('T')[0]) : '—'}</td>
-          </tr>`;
+          html += `
+            <tr>
+              <td><strong>${a.symbol}</strong></td>
+              <td>${a.action_type}</td>
+              <td>${formatDate(a.ex_date)}</td>
+              <td>${formatDate(a.record_date)}</td>
+              <td>${amount}</td>
+              <td style="font-size:12px;">${a.last_fetched ? formatDate(a.last_fetched.split('T')[0]) : '—'}</td>
+            </tr>
+          `;
         }
         html += '</tbody></table></div>';
-        html += renderAdminPagination(data.page, data.totalPages, 'loadActions');
+        html += renderPagination(data.page, data.totalPages, 'loadActions');
         container.innerHTML = html;
       } catch (err) {
         container.innerHTML = `<div class="card" style="color:var(--danger);">Error: ${err.message}</div>`;
       }
     }
 
-    // ─── Shared helpers ──────────────────────────────────────────────────
+    // ─── Alert Types ─────────────────────────────────────────────────────────
 
-    function renderAdminPagination(page, totalPages, fnName) {
-      if (totalPages <= 1) return '';
-      let html = '<div class="pagination" style="margin-top:12px;">';
-      html += `<button ${page <= 1 ? 'disabled' : ''} onclick="${fnName}(${page - 1})">Prev</button>`;
-      html += `<span style="font-size:13px;color:var(--text-secondary);">Page ${page} of ${totalPages}</span>`;
-      html += `<button ${page >= totalPages ? 'disabled' : ''} onclick="${fnName}(${page + 1})">Next</button>`;
-      html += '</div>';
-      return html;
+    async function loadAlertTypes() {
+      const grid = document.getElementById('types-grid');
+      try {
+        const { types } = await adminApi('GET', '/api/admin/alert-types');
+        if (!types || types.length === 0) {
+          grid.innerHTML = '<div style="color:var(--text-secondary);">No alert types found.</div>';
+          return;
+        }
+        grid.innerHTML = types.map(t => `
+          <div class="card type-card">
+            <div class="type-info">
+              <div class="type-name">${t.name || t.code}</div>
+              <div class="type-desc">${t.description || ''}</div>
+            </div>
+            <label class="toggle" title="${t.is_active ? 'Click to disable' : 'Click to enable'}">
+              <input type="checkbox" ${t.is_active ? 'checked' : ''} onchange="toggleAlertType('${t.code}', this)" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        `).join('');
+      } catch (err) {
+        grid.innerHTML = `<div style="color:var(--danger);">Error: ${err.message}</div>`;
+      }
     }
 
-    function switchTab(name) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-      const tabNames = ['users', 'alerts', 'actions'];
-      const idx = tabNames.indexOf(name);
-      document.querySelectorAll('.tab-btn')[idx].classList.add('active');
-      document.getElementById(`tab-${name}`).classList.add('active');
+    async function toggleAlertType(code, checkbox) {
+      const prev = checkbox.checked;
+      try {
+        await adminApi('POST', `/api/admin/alert-types/${code}/toggle`);
+        showAlert('alert-box', `${code} alert ${prev ? 'enabled' : 'disabled'}`, 'success');
+      } catch (err) {
+        checkbox.checked = !prev; // revert
+        showAlert('alert-box', `Toggle failed: ${err.message}`, 'error');
+      }
     }
+
+    // ─── Watchlist Stats ─────────────────────────────────────────────────────
+
+    async function loadWatchlistStats() {
+      const container = document.getElementById('watchlist-table');
+      try {
+        const { stocks } = await adminApi('GET', '/api/admin/watchlist-stats');
+        if (!stocks || stocks.length === 0) {
+          container.innerHTML = '<div class="card" style="color:var(--text-secondary);padding:20px;">No watchlist data yet.</div>';
+          return;
+        }
+        const maxCount = Math.max(...stocks.map(s => s.user_count));
+        let html = `
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>#</th><th>Symbol</th><th>Company</th><th>Users Watching</th>
+              </tr></thead>
+              <tbody>
+        `;
+        stocks.forEach((s, i) => {
+          const barW = Math.round((s.user_count / maxCount) * 80);
+          html += `
+            <tr>
+              <td style="color:var(--text-secondary);font-size:13px;">${i + 1}</td>
+              <td><strong>${s.symbol}</strong></td>
+              <td style="color:var(--text-secondary);font-size:13px;">${s.company_name || '—'}</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-weight:700;min-width:24px;">${s.user_count}</span>
+                  <div class="bar-mini" style="width:${barW}px;"></div>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = `<div class="card" style="color:var(--danger);">Error: ${err.message}</div>`;
+      }
+    }
+
+    // ─── Broadcast ───────────────────────────────────────────────────────────
+
+    async function loadRecipientCount() {
+      try {
+        const { recipient_count } = await adminApi('POST', '/api/admin/broadcast', { message: 'ping', dry_run: true });
+        const el = document.getElementById('recipient-info');
+        if (el) el.textContent = `Will send to ${recipient_count} verified user${recipient_count !== 1 ? 's' : ''}`;
+      } catch { /* non-fatal */ }
+    }
+
+    function updateCharCount() {
+      const msg = document.getElementById('broadcast-msg')?.value || '';
+      const el = document.getElementById('char-count');
+      if (el) el.textContent = `${msg.length} chars`;
+    }
+
+    async function previewBroadcast() {
+      try {
+        const { recipient_count } = await adminApi('POST', '/api/admin/broadcast', { message: 'preview', dry_run: true });
+        showAlert('alert-box', `${recipient_count} verified users will receive this message`, 'success');
+      } catch (err) {
+        showAlert('alert-box', `Preview failed: ${err.message}`, 'error');
+      }
+    }
+
+    async function sendBroadcast() {
+      const message = document.getElementById('broadcast-msg')?.value.trim();
+      if (!message) { showAlert('alert-box', 'Please enter a message', 'error'); return; }
+      if (!confirm(`Send this message to all verified users?\n\n"${message}"`)) return;
+
+      const btn = document.getElementById('btn-broadcast');
+      setLoading(btn, true);
+      try {
+        const data = await adminApi('POST', '/api/admin/broadcast', { message });
+        showAlert('alert-box', data.message, 'success');
+        document.getElementById('broadcast-msg').value = '';
+        updateCharCount();
+      } catch (err) {
+        showAlert('alert-box', `Broadcast failed: ${err.message}`, 'error');
+      }
+      setLoading(btn, false);
+    }
+
+    // ─── Manual triggers ─────────────────────────────────────────────────────
 
     async function triggerFetch() {
       const btn = document.getElementById('btn-fetch');
@@ -347,9 +957,34 @@
         const data = await adminApi('POST', '/api/admin/seed-stocks');
         showAlert('alert-box', data.message, 'success');
       } catch (err) {
-        showAlert('alert-box', `Stock seed failed: ${err.message}`, 'error');
+        showAlert('alert-box', `Seed failed: ${err.message}`, 'error');
       }
       setLoading(btn, false);
+    }
+
+    // ─── Tab switcher ────────────────────────────────────────────────────────
+
+    function switchTab(name) {
+      const tabs = ['users', 'alerts', 'actions', 'types', 'watchlist', 'broadcast'];
+      document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        b.classList.toggle('active', tabs[i] === name);
+      });
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('active', t === name);
+      });
+    }
+
+    // ─── Shared helpers ───────────────────────────────────────────────────────
+
+    function renderPagination(page, totalPages, fnName) {
+      if (totalPages <= 1) return '';
+      return `
+        <div class="pagination">
+          <button ${page <= 1 ? 'disabled' : ''} onclick="${fnName}(${page - 1})">← Prev</button>
+          <span>Page ${page} of ${totalPages}</span>
+          <button ${page >= totalPages ? 'disabled' : ''} onclick="${fnName}(${page + 1})">Next →</button>
+        </div>
+      `;
     }
   </script>
 </body>

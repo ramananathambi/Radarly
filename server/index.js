@@ -22,6 +22,25 @@ async function initDb() {
     console.error('[DB] Migration error:', err.message);
   }
 
+  // ── Scheduler log table ───────────────────────────────────────────────────
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS scheduler_log (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        job_name    VARCHAR(100) NOT NULL,
+        started_at  DATETIME NOT NULL DEFAULT NOW(),
+        finished_at DATETIME,
+        status      ENUM('running','success','failed') DEFAULT 'running',
+        message     TEXT,
+        INDEX idx_job_name (job_name),
+        INDEX idx_started_at (started_at)
+      )
+    `);
+    console.log('[DB] scheduler_log table ready');
+  } catch (err) {
+    console.error('[DB] scheduler_log migration error:', err.message);
+  }
+
   // ── Alert type migrations ─────────────────────────────────────────────────
   try {
     // Activate RIGHTS (was previously inactive / coming soon)

@@ -3,23 +3,23 @@
  * Cron job runner — all jobs run in Asia/Kolkata (IST) timezone.
  *
  * Schedule:
- *   8:00 AM IST — NSE corporate actions fetch (pre-market)
- *   9:15 AM - 3:45 PM IST (every 5 min) — LTP price fetch
- *   9:30 AM IST — Alert engine
- *   6:00 PM IST — NSE corporate actions fetch (post-market, catches intraday announcements)
+ *   8:00 AM IST  — NSE corporate actions fetch (pre-market)
+ *   9:15-15:45 IST (every 5 min, Mon-Fri) — LTP price fetch
+ *   9:30 AM IST  — Alert engine
+ *   6:00 PM IST  — NSE corporate actions fetch (post-market)
  */
 const cron = require('node-cron');
 const { fetchNSE }       = require('./fetchNSE');
 const { runAlertEngine } = require('./alertEngine');
 const { fetchPrices }    = require('./fetchPrices');
+const { pool }           = require('../lib/db');
 
-// In dev, retry after 5s so the process doesn't hang for 30 minutes
 const RETRY_DELAY_MS = process.env.DEV_MODE === 'true'
-  ? 5 * 1000            // 5 seconds in dev
-  : 30 * 60 * 1000;     // 30 minutes in production
-const MAX_RETRIES     = 3;
+  ? 5 * 1000
+  : 30 * 60 * 1000;
+const MAX_RETRIES = 3;
 
-// ─── Retry wrapper ────────────────────────────────────────────────────────────
+// ─── Retry wrapper ─────────────────────────────────────────────────────────
 
 async function withRetry(label, fn, maxRetries = MAX_RETRIES) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -40,16 +40,42 @@ async function withRetry(label, fn, maxRetries = MAX_RETRIES) {
   }
 }
 
-// ─── Job runners ──────────────────────────────────────────────────────────────
+// ─── DB logging helpers ────────────────────────────────────────────────────
 
-async function runDataFetch() {
+async function logJobStart(jobName) {
+  try {
+    const [result] = await pool.execute(
+      'INSERT INTO scheduler_log (job_name, started_at, status) VALUES (?, NOW(), "running")',
+      [jobName]
+    );
+    return result.insertId;
+  } catch {
+    return null;
+  }
+}
+
+async function logJobEnd(logId, status, message = null) {
+  if (!logId) return;
+  try {
+    await pool.execute(
+      'UPDATE scheduler_log SET finished_at = NOW(), status = ?, message = ? WHERE id = ?',
+      [status, message ? String(message).substring(0, 500) : null, logId]
+    );
+  } catch { /* non-fatal */ }
+}
+
+// ─── Job runners ───────────────────────────────────────────────────────────
+
+async function runDataFetch(jobLabel = 'NSE Fetch') {
   console.log('[Scheduler] ── Data fetch started ──');
-
+  const logId = await logJobStart(jobLabel);
   try {
     const result = await withRetry('NSE fetch', fetchNSE);
+    await logJobEnd(logId, 'success', result ? JSON.stringify(result).substring(0, 400) : 'Done');
     console.log('[Scheduler] ── Data fetch complete ──', result);
     return result;
   } catch (err) {
+    await logJobEnd(logId, 'failed', err.message);
     console.error('[Scheduler] NSE fetch ultimately failed');
   }
 }
@@ -62,50 +88,48 @@ async function runPriceFetch() {
   }
 }
 
-// ─── Cron registration ────────────────────────────────────────────────────────
+// ─── Cron registration ─────────────────────────────────────────────────────
 
 function startScheduler() {
-  // 8:00 AM IST — fetch NSE corporate actions
+  // 8:00 AM IST — fetch NSE corporate actions (pre-market)
   cron.schedule('0 8 * * *', async () => {
     try {
-      await runDataFetch();
+      await runDataFetch('NSE Fetch (Morning)');
     } catch (err) {
-      console.error('[Scheduler] Data fetch run error:', err.message);
+      console.error('[Scheduler] Morning fetch error:', err.message);
     }
   }, { timezone: 'Asia/Kolkata' });
 
-  // Every 5 minutes during market hours (9:15 AM - 3:45 PM IST, Mon-Fri)
+  // Every 5 minutes during market hours (9:15 AM – 3:45 PM IST, Mon-Fri)
   cron.schedule('*/5 9-15 * * 1-5', async () => {
-    // Only run during market window: 9:15 AM to 3:45 PM
     const now = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
     const istNow = new Date(now);
-    const hour = istNow.getHours();
-    const minute = istNow.getMinutes();
-    const timeMinutes = hour * 60 + minute;
-
-    // Market open: 9:15 (555 min), Market close: 15:45 (945 min)
+    const timeMinutes = istNow.getHours() * 60 + istNow.getMinutes();
     if (timeMinutes >= 555 && timeMinutes <= 945) {
       await runPriceFetch();
     }
   }, { timezone: 'Asia/Kolkata' });
 
-  // 9:30 AM IST — alert engine (1.5hr after morning corporate actions fetch)
+  // 9:30 AM IST — alert engine (runs after morning fetch)
   cron.schedule('30 9 * * *', async () => {
+    const logId = await logJobStart('Alert Engine');
     console.log('[Scheduler] ── Alert engine started ──');
     try {
-      await runAlertEngine();
+      const result = await runAlertEngine();
+      await logJobEnd(logId, 'success', result ? JSON.stringify(result) : 'Done');
       console.log('[Scheduler] ── Alert engine complete ──');
     } catch (err) {
+      await logJobEnd(logId, 'failed', err.message);
       console.error('[Scheduler] Alert engine failed:', err.message);
     }
   }, { timezone: 'Asia/Kolkata' });
 
-  // 6:00 PM IST — post-market data fetch (captures intraday announcements)
+  // 6:00 PM IST — post-market data fetch (catches intraday announcements)
   cron.schedule('0 18 * * *', async () => {
     try {
-      await runDataFetch();
+      await runDataFetch('NSE Fetch (Evening)');
     } catch (err) {
-      console.error('[Scheduler] Evening data fetch run error:', err.message);
+      console.error('[Scheduler] Evening fetch error:', err.message);
     }
   }, { timezone: 'Asia/Kolkata' });
 
