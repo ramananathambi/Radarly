@@ -272,7 +272,7 @@
             headers: { 'Authorization': `Bearer ${session.access_token}` }
           });
           if (resp.ok) {
-            window.location.href = '/dashboard.html';
+            window.location.replace('/dashboard.html');
           } else {
             await _supa.auth.signOut({ scope: 'local' });
             document.body.classList.add('ready');
