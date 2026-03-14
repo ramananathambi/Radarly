@@ -47,7 +47,11 @@ router.post('/sync', async (req, res) => {
   const supaId = supaUser.id;
   const phone  = supaUser.phone  || '';
   const email  = supaUser.email  || null;
-  const name   = req.body?.name?.trim() || null;
+  // Name priority: explicitly passed (email signup) → Google/Apple metadata → null
+  const name   = req.body?.name?.trim()
+              || supaUser.user_metadata?.full_name?.trim()
+              || supaUser.user_metadata?.name?.trim()
+              || null;
 
   // Find or create MySQL user (Supabase UUID is the primary key)
   try {
