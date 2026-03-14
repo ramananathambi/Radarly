@@ -10,11 +10,6 @@ async function getToken() {
   return session?.access_token || null;
 }
 
-async function logout() {
-  await _supa.auth.signOut();
-  window.location.href = '/';
-}
-
 // ─── API helper ──────────────────────────────────────────────────────────────
 
 async function api(method, path, body) {
@@ -40,12 +35,18 @@ async function requireLogin() {
   if (!session) { window.location.href = '/login.html'; return null; }
   const user = await getMe();
   if (!user) {
-    // Backend couldn't verify user — sign out to prevent redirect loop
-    await _supa.auth.signOut();
+    // Clear session locally (no network call) to guarantee it's gone before redirect
+    await _supa.auth.signOut({ scope: 'local' });
+    sessionStorage.setItem('_auth_cleared', '1');
     window.location.href = '/login.html';
     return null;
   }
   return user;
+}
+
+async function logout() {
+  await _supa.auth.signOut({ scope: 'local' });
+  window.location.href = '/';
 }
 
 // ─── UI helpers ──────────────────────────────────────────────────────────────
