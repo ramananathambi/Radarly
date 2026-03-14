@@ -339,6 +339,7 @@
   border-radius: 16px;
   padding: 32px;
   transition: box-shadow 0.22s ease, transform 0.22s ease;
+  cursor: pointer;
 }
 .lp-features .lp-feature-card:hover,
 .lp-features .lp-feature-card:active {
