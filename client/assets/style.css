@@ -132,13 +132,19 @@ a:hover { text-decoration: underline; }
 }
 
 /* Tables */
-.table-wrap { overflow-x: auto; }
+.table-wrap {
+  overflow: auto;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
 table { width: 100%; border-collapse: separate; border-spacing: 0; }
 th, td { padding: 12px 14px; text-align: left; font-size: 14px; }
-td { border-bottom: 1px solid var(--border); text-align: center; }
+td { border-bottom: 1px solid var(--border); text-align: center; background: #ffffff; }
+tbody tr:last-child td { border-bottom: none; }
 th { font-weight: 700; color: #fff; background: #111; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; text-align: center; }
-th:first-child { border-radius: 8px 0 0 8px; }
-th:last-child  { border-radius: 0 8px 8px 0; }
+th:first-child { border-radius: 8px 0 0 0; }
+th:last-child  { border-radius: 0 8px 0 0; }
 tr:hover td { background: #f3f4f6; }
 
 /* Badges */
