@@ -437,7 +437,7 @@
         total === 0
           ? 'Add stocks to get started'
           : matchCount === 0
-            ? 'no upcoming events'
+            ? 'No Upcoming Events'
             : `Stock${matchCount !== 1 ? 's' : ''} with Upcoming Events`;
 
       renderTypeTabs();
@@ -455,7 +455,7 @@
       for (const d of DAY_OPTIONS) {
         const btn = document.createElement('button');
         btn.className = `filter-tab range-tab${d === activeDays ? ' active' : ''}`;
-        btn.textContent = d < 30 ? `${d} days` : d === 30 ? '1 month' : d === 60 ? '2 months' : '3 months';
+        btn.textContent = d < 30 ? `${d} Days` : d === 30 ? '1 Month' : d === 60 ? '2 Months' : '3 Months';
         btn.onclick = () => setDays(d);
         row.appendChild(btn);
       }
@@ -616,9 +616,9 @@
       const container = document.getElementById('events-container');
 
       if (events.length === 0) {
-        const label = activeDays < 30 ? `${activeDays} days` :
-                      activeDays === 30 ? '1 month' :
-                      activeDays === 60 ? '2 months' : '3 months';
+        const label = activeDays < 30 ? `${activeDays} Days` :
+                      activeDays === 30 ? '1 Month' :
+                      activeDays === 60 ? '2 Months' : '3 Months';
         container.innerHTML = `
           <div class="card no-events">
             <div class="no-events-icon">
