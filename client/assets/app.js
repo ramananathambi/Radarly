@@ -65,7 +65,9 @@ function clearAlert(containerId) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '—';
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IN', {
+  // Handles both 'YYYY-MM-DD' and 'YYYY-MM-DD HH:MM:SS' (MySQL dateStrings format)
+  const clean = String(dateStr).substring(0, 10);
+  return new Date(clean + 'T00:00:00').toLocaleDateString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric'
   });
 }
