@@ -64,6 +64,65 @@
       border: 1px solid var(--border);
     }
 
+    /* ── Card entrance animation ─────────────────────────── */
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .pref-card-anim {
+      opacity: 0;
+      animation: card-in 0.35s ease forwards;
+    }
+
+    /* ── Coming Soon shimmer ──────────────────────────────── */
+    .coming-soon-card {
+      position: relative;
+      overflow: hidden;
+    }
+    .coming-soon-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        105deg,
+        transparent 40%,
+        rgba(255,255,255,0.45) 50%,
+        transparent 60%
+      );
+      background-size: 200% 100%;
+      animation: cs-shimmer 2.6s ease-in-out infinite;
+    }
+    @keyframes cs-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Active count badge ───────────────────────────────── */
+    .active-count-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      margin-left: 8px;
+      vertical-align: middle;
+      transition: transform 0.2s ease;
+    }
+    .active-count-badge.bump {
+      animation: badge-bump 0.25s ease;
+    }
+    @keyframes badge-bump {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.35); }
+      100% { transform: scale(1); }
+    }
+
     /* ── Toggle ripple ───────────────────────────────────── */
     .toggle-ripple {
       position: absolute;
@@ -111,7 +170,7 @@
     <h1 class="page-title">Alert Settings <button class="refresh-btn" onclick="refreshData()" title="Refresh" id="refresh-btn"><span class="refresh-icon">&#x21bb;</span></button></h1>
 
     <!-- Active alerts -->
-    <div class="section-title">Active Alert Types</div>
+    <div class="section-title">Active Alert Types<span class="active-count-badge" id="active-count">0</span></div>
     <div id="active-prefs">
       <div class="spinner"></div>
     </div>
@@ -166,18 +225,21 @@
 
       if (prefs.length === 0) {
         container.innerHTML = '<div class="card" style="color:var(--text-secondary);">No active alert types configured.</div>';
+        updateActiveCount(0);
         return;
       }
 
       let html = '';
-      for (const p of prefs) {
+      for (let i = 0; i < prefs.length; i++) {
+        const p = prefs[i];
         const code = p.alert_type;
         const desc = alertDescriptions[code] || `Alerts for ${code} corporate actions.`;
         const isEnabled = p.is_enabled;
         const scope = p.scope || 'all_stocks';
+        const delay = i * 60;
 
         html += `
-          <div class="card pref-card" id="pref-${code}">
+          <div class="card pref-card pref-card-anim" id="pref-${code}" style="animation-delay:${delay}ms;">
             <div class="pref-info">
               <div class="pref-title">${formatAlertType(code)}</div>
               <div class="pref-desc">${desc}</div>
@@ -200,6 +262,7 @@
       }
 
       container.innerHTML = html;
+      updateActiveCount(prefs.filter(p => p.is_enabled).length);
     }
 
     function renderInactivePrefs(prefs) {
@@ -219,7 +282,7 @@
       for (const code of inactiveCodes) {
         const desc = alertDescriptions[code] || `Alerts for ${code} corporate actions.`;
         html += `
-          <div class="card pref-card" style="opacity:0.6;">
+          <div class="card pref-card coming-soon-card" style="opacity:0.6;">
             <div class="pref-info">
               <div class="pref-title">${formatAlertType(code)} <span class="inactive-badge">Coming Soon</span></div>
               <div class="pref-desc">${desc}</div>
@@ -229,6 +292,15 @@
       }
 
       container.innerHTML = html;
+    }
+
+    function updateActiveCount(n) {
+      const badge = document.getElementById('active-count');
+      if (!badge) return;
+      badge.textContent = n;
+      badge.classList.remove('bump');
+      void badge.offsetWidth; // reflow to restart animation
+      badge.classList.add('bump');
     }
 
     function formatAlertType(code) {
@@ -247,6 +319,10 @@
 
       // Enable/disable scope select based on toggle
       scopeSelect.disabled = !isEnabled;
+
+      // Update live active count
+      const enabledCount = document.querySelectorAll('#active-prefs input[type=checkbox]:checked').length;
+      updateActiveCount(enabledCount);
 
       statusEl.textContent = 'Saving...';
       statusEl.style.color = 'var(--text-secondary)';
