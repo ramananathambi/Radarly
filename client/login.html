@@ -252,9 +252,22 @@
   <script src="/assets/supabase-client.js"></script>
   <script src="/assets/app.js"></script>
   <script>
-    // If already logged in, redirect to dashboard
-    _supa.auth.getSession().then(({ data: { session } }) => {
-      if (session) window.location.href = '/dashboard.html';
+    // If already logged in AND backend recognises the user, redirect to dashboard
+    _supa.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      try {
+        const resp = await fetch('/api/user/me', {
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        });
+        if (resp.ok) {
+          window.location.href = '/dashboard.html';
+        } else {
+          // Backend doesn't know this user yet — clear session to avoid loop
+          await _supa.auth.signOut();
+        }
+      } catch {
+        await _supa.auth.signOut();
+      }
     });
 
     // ── Helpers ──────────────────────────────────────────────────────────────
