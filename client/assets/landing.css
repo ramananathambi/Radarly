@@ -313,54 +313,43 @@
   margin: 0;
 }
 
-/* Feature Cards */
+/* Feature Rows */
 .lp-why-bg {
   background: #fff;
 }
 .lp-features {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+  gap: 28px;
   max-width: 800px;
   margin: 0 auto;
 }
-.lp-feature-card {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 32px;
-  transition: box-shadow 0.2s, transform 0.2s;
-}
-.lp-feature-card h3 {
-  color: var(--text);
-}
-.lp-feature-card p {
-  color: var(--text-secondary);
-}
-.lp-feature-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+.lp-feature-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
 }
 .lp-feature-icon {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   background: #fef2f2;
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  flex-shrink: 0;
 }
-.lp-feature-card h3 {
-  font-size: 18px;
+.lp-feature-row h3 {
+  font-size: 16px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   color: var(--text);
 }
-.lp-feature-card p {
-  font-size: 16px;
+.lp-feature-row p {
+  font-size: 14px;
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: 1.5;
+  margin: 0;
 }
 
 /* Pricing */
@@ -498,12 +487,6 @@
 .scroll-fade-children.visible > * {
   opacity: 1;
   transform: translateY(0);
-}
-
-/* 5. Enhanced feature card hover */
-.lp-feature-card:hover {
-  box-shadow: 0 16px 40px rgba(0,0,0,0.13);
-  transform: translateY(-7px);
 }
 
 
