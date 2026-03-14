@@ -7,6 +7,30 @@
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   <link rel="stylesheet" href="/assets/style.css?v=5" />
   <style>
+    /* ── Dashboard mobile nav: no hamburger, logout top-right ── */
+    @media (max-width: 768px) {
+      .nav-toggle          { display: none !important; }
+      .nav-links           { display: none !important; }
+      .dashboard-logout {
+        display: flex;
+        align-items: center;
+        position: absolute;
+        right: 14px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--accent);
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 0;
+        text-decoration: none;
+      }
+      .dashboard-logout:hover { color: var(--accent-hover); text-decoration: none; }
+    }
+    @media (min-width: 769px) {
+      .dashboard-logout { display: none; }
+    }
+
     /* ── Event type badges ───────────────────────────────── */
     .event-badge {
       display: inline-block;
@@ -257,6 +281,8 @@
       <a href="/account.html">Account</a>
       <a href="#" onclick="logout()" class="logout-link">Logout</a>
     </div>
+    <!-- Mobile-only logout shortcut (no hamburger on dashboard) -->
+    <a href="#" onclick="logout()" class="dashboard-logout">Logout</a>
   </nav>
 
   <div class="container">
