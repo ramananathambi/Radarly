@@ -604,6 +604,23 @@
   .lp-contact-row {
     flex-direction: column;
   }
+
+  /* ── Homepage mobile nav: no hamburger, Login button top-right ── */
+  .nav-toggle { display: none !important; }
+  .nav-links {
+    position: static !important;
+    display: flex !important;
+    flex-direction: row !important;
+    background: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    left: auto !important;
+    top: auto !important;
+    gap: 0 !important;
+    transition: none !important;
+  }
 }
 
 /* ── Contact Section ─────────────────────────────────────────────────────── */
