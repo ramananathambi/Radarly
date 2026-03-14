@@ -47,6 +47,7 @@ router.post('/sync', async (req, res) => {
   const supaId = supaUser.id;
   const phone  = supaUser.phone  || '';
   const email  = supaUser.email  || null;
+  const name   = req.body?.name?.trim() || null;
 
   // Find or create MySQL user (Supabase UUID is the primary key)
   try {
@@ -97,8 +98,8 @@ router.post('/sync', async (req, res) => {
       } else {
         // Truly new user — create MySQL record using Supabase UUID as id
         await pool.execute(
-          `INSERT INTO users (id, phone, email, is_verified) VALUES (?, ?, ?, 1)`,
-          [supaId, phone, email]
+          `INSERT INTO users (id, name, phone, email, is_verified) VALUES (?, ?, ?, ?, 1)`,
+          [supaId, name, phone, email]
         );
         const [newRows] = await pool.execute(
           'SELECT id, name, phone, email FROM users WHERE id = ?',

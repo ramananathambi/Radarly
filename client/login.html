@@ -469,11 +469,11 @@
             return;
           }
 
-          // Sync to MySQL
+          // Sync to MySQL (pass name so onboarding is skipped for new signups)
           const syncResp = await fetch('/api/auth/sync', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: val })
+            body: JSON.stringify({ email: val, name: isRegisterMode ? name : undefined })
           });
           const syncData = await syncResp.json();
           showSuccess(btn, syncData.needsOnboarding ? '/onboarding.html' : '/dashboard.html');
