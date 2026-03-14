@@ -602,7 +602,7 @@
 /* ── Contact Section ─────────────────────────────────────────────────────── */
 .lp-contact {
   padding: 80px 24px;
-  background: #0d0d0d;
+  background: #000;
 }
 .lp-contact-inner {
   max-width: 640px;
