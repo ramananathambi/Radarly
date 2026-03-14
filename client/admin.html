@@ -375,7 +375,7 @@
           <div class="card" style="padding:24px;">
             <h3 style="margin-bottom:4px;">Send Broadcast Message</h3>
             <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">
-              Sends a WhatsApp message to all verified users with a phone number.
+              Sends a WhatsApp message to all users with a phone number.
             </p>
             <textarea id="broadcast-msg" placeholder="Type your message here…" oninput="updateCharCount()"></textarea>
             <div class="broadcast-meta">
@@ -598,7 +598,7 @@
           <div class="table-wrap">
             <table>
               <thead><tr>
-                <th>Name</th><th>Email</th><th>Phone</th><th>Verified</th><th>Joined</th>
+                <th>Name</th><th>Email</th><th>Phone</th><th>Joined</th>
               </tr></thead>
               <tbody>
         `;
@@ -608,7 +608,6 @@
               <td><strong>${u.name || '—'}</strong></td>
               <td style="font-size:13px;color:var(--text-secondary);">${u.email || '—'}</td>
               <td>${u.phone || '—'}</td>
-              <td><span class="badge ${u.is_verified ? 'badge-yes' : 'badge-no'}">${u.is_verified ? 'Yes' : 'No'}</span></td>
               <td style="font-size:13px;">${formatDate(u.created_at?.split('T')[0])}</td>
             </tr>
           `;
@@ -672,7 +671,6 @@
               <h4>${user.name || '—'}</h4>
               <p>${user.email || 'No email'}</p>
               <p style="margin-top:2px;">${user.phone || 'No phone'} · Joined ${formatDate(user.created_at?.split('T')[0])}</p>
-              <p style="margin-top:4px;"><span class="badge ${user.is_verified ? 'badge-yes' : 'badge-no'}">${user.is_verified ? 'Verified' : 'Unverified'}</span></p>
             </div>
           </div>
 
@@ -898,7 +896,7 @@
       try {
         const { recipient_count } = await adminApi('POST', '/api/admin/broadcast', { message: 'ping', dry_run: true });
         const el = document.getElementById('recipient-info');
-        if (el) el.textContent = `Will send to ${recipient_count} verified user${recipient_count !== 1 ? 's' : ''}`;
+        if (el) el.textContent = `Will send to ${recipient_count} user${recipient_count !== 1 ? 's' : ''}`;
       } catch { /* non-fatal */ }
     }
 
@@ -911,7 +909,7 @@
     async function previewBroadcast() {
       try {
         const { recipient_count } = await adminApi('POST', '/api/admin/broadcast', { message: 'preview', dry_run: true });
-        showAlert('alert-box', `${recipient_count} verified users will receive this message`, 'success');
+        showAlert('alert-box', `${recipient_count} users will receive this message`, 'success');
       } catch (err) {
         showAlert('alert-box', `Preview failed: ${err.message}`, 'error');
       }
@@ -920,7 +918,7 @@
     async function sendBroadcast() {
       const message = document.getElementById('broadcast-msg')?.value.trim();
       if (!message) { showAlert('alert-box', 'Please enter a message', 'error'); return; }
-      if (!confirm(`Send this message to all verified users?\n\n"${message}"`)) return;
+      if (!confirm(`Send this message to all users?\n\n"${message}"`)) return;
 
       const btn = document.getElementById('btn-broadcast');
       setLoading(btn, true);

@@ -95,7 +95,7 @@ router.get('/users', requireAdmin, async (req, res) => {
 
   try {
     let countQuery = 'SELECT COUNT(*) AS total FROM users';
-    let dataQuery  = 'SELECT id, name, phone, email, is_verified, created_at FROM users';
+    let dataQuery  = 'SELECT id, name, phone, email, created_at FROM users';
     const params   = [];
 
     if (search) {
@@ -112,7 +112,6 @@ router.get('/users', requireAdmin, async (req, res) => {
     const total = countRows[0].total;
     const [rows] = await pool.execute(dataQuery, searchParams);
 
-    rows.forEach(r => { r.is_verified = !!r.is_verified; });
     res.json({ users: rows, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('[Admin] Users list error:', err.message);
@@ -125,7 +124,7 @@ router.get('/users/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     const [[user]] = await pool.execute(
-      'SELECT id, name, phone, email, is_verified, created_at FROM users WHERE id = ?', [id]
+      'SELECT id, name, phone, email, created_at FROM users WHERE id = ?', [id]
     );
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -145,7 +144,6 @@ router.get('/users/:id', requireAdmin, async (req, res) => {
       [id]
     );
 
-    user.is_verified = !!user.is_verified;
     res.json({ user, watchlist, prefs, alertHistory });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -303,7 +301,7 @@ router.post('/broadcast', requireAdmin, async (req, res) => {
 
   try {
     const [users] = await pool.execute(
-      'SELECT id, name, phone FROM users WHERE is_verified = 1 AND phone IS NOT NULL AND phone != ""'
+      'SELECT id, name, phone FROM users WHERE phone IS NOT NULL AND phone != ""'
     );
 
     if (dry_run) {
@@ -311,7 +309,7 @@ router.post('/broadcast', requireAdmin, async (req, res) => {
     }
 
     if (users.length === 0) {
-      return res.json({ success: true, sent: 0, message: 'No verified users with phone numbers' });
+      return res.json({ success: true, sent: 0, message: 'No users with phone numbers' });
     }
 
     // Acknowledge immediately, send in background

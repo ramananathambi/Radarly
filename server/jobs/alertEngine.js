@@ -133,7 +133,7 @@ async function runAlertEngine() {
 async function getEligibleUsers(symbol, alertType) {
   // Users with 'all_stocks' scope — get all of them with pref enabled
   const [allStocksRows] = await pool.execute(
-    `SELECT u.id, u.name, u.phone, u.is_verified
+    `SELECT u.id, u.name, u.phone
      FROM user_alert_preferences uap
      JOIN users u ON uap.user_id = u.id
      WHERE uap.alert_type = ? AND uap.scope = 'all_stocks' AND uap.is_enabled = 1`,
@@ -142,7 +142,7 @@ async function getEligibleUsers(symbol, alertType) {
 
   // Users with 'selected_stocks' scope — only if they bookmarked this symbol
   const [selectedStocksRows] = await pool.execute(
-    `SELECT u.id, u.name, u.phone, u.is_verified
+    `SELECT u.id, u.name, u.phone
      FROM user_alert_preferences uap
      JOIN users u ON uap.user_id = u.id
      WHERE uap.alert_type = ? AND uap.scope = 'selected_stocks' AND uap.is_enabled = 1`,
@@ -164,13 +164,13 @@ async function getEligibleUsers(symbol, alertType) {
     qualifiedSelected = selectedStocksRows.filter(u => bookmarkedIds.has(u.id));
   }
 
-  // Merge both groups, deduplicate by user_id, filter verified users with phone
+  // Merge both groups, deduplicate by user_id, filter users with phone
   const allUsers = [...allStocksRows, ...qualifiedSelected];
   const seen     = new Set();
   const users    = [];
 
   for (const u of allUsers) {
-    if (!u.phone || !u.is_verified) continue;
+    if (!u.phone) continue;
     if (seen.has(u.id)) continue;
     seen.add(u.id);
     users.push(u);

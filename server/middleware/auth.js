@@ -28,7 +28,7 @@ async function requireAuth(req, res, next) {
 
     // Look up our MySQL user by Supabase user ID
     const [rows] = await pool.execute(
-      'SELECT id, name, phone, email, is_verified FROM users WHERE id = ?',
+      'SELECT id, name, phone, email FROM users WHERE id = ?',
       [supaUser.id]
     );
 
@@ -38,7 +38,6 @@ async function requireAuth(req, res, next) {
       return res.status(401).json({ error: 'Account not found. Please log in again.' });
     }
 
-    user.is_verified = !!user.is_verified;
     req.user = user;
     next();
   } catch (err) {
