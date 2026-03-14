@@ -102,12 +102,12 @@ router.get('/users', requireAdmin, async (req, res) => {
       const like = `%${search}%`;
       countQuery += ' WHERE name LIKE ? OR phone LIKE ? OR email LIKE ?';
       dataQuery  += ' WHERE name LIKE ? OR phone LIKE ? OR email LIKE ?';
-      params.push(like, like);
+      params.push(like, like, like);
     }
 
     dataQuery += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
 
-    const searchParams = search ? [params[0], params[1], params[2]] : [];
+    const searchParams = search ? params : [];
     const [countRows] = await pool.execute(countQuery, searchParams);
     const total = countRows[0].total;
     const [rows] = await pool.execute(dataQuery, searchParams);
