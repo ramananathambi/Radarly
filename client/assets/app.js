@@ -39,7 +39,12 @@ async function requireLogin() {
   const { data: { session } } = await _supa.auth.getSession();
   if (!session) { window.location.href = '/login.html'; return null; }
   const user = await getMe();
-  if (!user) { window.location.href = '/login.html'; return null; }
+  if (!user) {
+    // Backend couldn't verify user — sign out to prevent redirect loop
+    await _supa.auth.signOut();
+    window.location.href = '/login.html';
+    return null;
+  }
   return user;
 }
 
