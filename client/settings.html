@@ -232,7 +232,9 @@
     }
 
     function formatAlertType(code) {
-      return code.charAt(0) + code.slice(1).toLowerCase() + ' Alerts';
+      const labels = { IPO: 'IPO' };
+      const label = labels[code] || (code.charAt(0) + code.slice(1).toLowerCase());
+      return label + ' Alerts';
     }
 
     async function updatePref(code) {
