@@ -338,11 +338,11 @@
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 32px;
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition: box-shadow 0.22s ease, transform 0.22s ease;
 }
 .lp-feature-card:hover {
-  box-shadow: 0 16px 40px rgba(0,0,0,0.10);
-  transform: translateY(-4px);
+  box-shadow: 0 24px 56px rgba(0,0,0,0.18);
+  transform: translateY(-8px) scale(1.02);
 }
 .lp-feature-icon {
   width: 48px;
