@@ -152,14 +152,35 @@ router.get('/users/:id', requireAdmin, async (req, res) => {
   }
 });
 
-// DELETE /api/admin/users/:id — delete user and all data
+// DELETE /api/admin/users/:id — delete user from MySQL + Supabase
 router.delete('/users/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   try {
+    // 1. Delete all MySQL data first
     await pool.execute('DELETE FROM user_alert_preferences WHERE user_id = ?', [id]);
     await pool.execute('DELETE FROM user_stocks WHERE user_id = ?', [id]);
     await pool.execute('DELETE FROM alert_log WHERE user_id = ?', [id]);
     await pool.execute('DELETE FROM users WHERE id = ?', [id]);
+
+    // 2. Delete from Supabase Auth so the email is fully freed
+    const supaDeleteResp = await fetch(
+      `${process.env.SUPABASE_URL}/auth/v1/admin/users/${id}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        },
+      }
+    );
+
+    if (!supaDeleteResp.ok && supaDeleteResp.status !== 404) {
+      // Log but don't fail — MySQL is already cleaned, partial success is still useful
+      const errBody = await supaDeleteResp.text();
+      console.error(`[Admin] Supabase delete failed for ${id}:`, errBody);
+      return res.json({ success: true, warning: 'MySQL deleted but Supabase delete failed — check service role key' });
+    }
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

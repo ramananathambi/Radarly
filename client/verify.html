@@ -200,8 +200,16 @@
         });
         const syncData = await syncResp.json();
 
+        if (!syncResp.ok) {
+          await _supa.auth.signOut({ scope: 'local' });
+          localStorage.removeItem('otp_phone');
+          const msg = encodeURIComponent(syncData.error || 'Sign-in failed. Please try again.');
+          window.location.href = `/login.html?error=${msg}`;
+          return;
+        }
+
         localStorage.removeItem('otp_phone');
-        window.location.href = syncData.needsOnboarding ? '/onboarding.html' : '/dashboard.html';
+        window.location.href = '/dashboard.html';
       } catch (err) {
         showAlert('alert-box', err.message || 'Invalid OTP. Please try again.', 'error');
         setLoading(btn, false);

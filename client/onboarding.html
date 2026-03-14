@@ -2,62 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome — Radarly</title>
-  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
-  <link rel="stylesheet" href="/assets/style.css?v=5" />
+  <meta http-equiv="refresh" content="0;url=/dashboard.html" />
+  <title>Radarly</title>
 </head>
 <body>
-  <nav class="nav">
-    <a class="nav-brand" href="/"><img src="/assets/logo-nav.png" alt="Radarly" class="nav-logo"></a>
-  </nav>
-  <div class="container" style="max-width:400px;margin-top:48px;">
-    <div class="card">
-      <h2 style="margin-bottom:8px;">Welcome to Radarly</h2>
-      <p style="color:var(--text-secondary);margin-bottom:24px;">Tell us your name so we can personalise your alerts</p>
-      <div id="alert-box"></div>
-
-      <form id="onboard-form">
-        <div class="form-group">
-          <label for="name">Your Name</label>
-          <input type="text" id="name" placeholder="e.g. Ramana" required />
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;" id="save-btn">Start Getting Alerts</button>
-      </form>
-    </div>
-  </div>
-
-  <footer class="site-footer">
-    <div>Built in Chennai ❤️ for India 🇮🇳</div>
-    <div style="margin-top:8px; opacity:0.6; font-size:12px;">© 2026 Radarly. All rights reserved.</div>
-  </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="/assets/supabase-client.js"></script>
-  <script src="/assets/app.js"></script>
-  <script>
-    _supa.auth.getSession().then(({ data: { session } }) => {
-      if (!session) window.location.href = '/login.html';
-    });
-
-    document.getElementById('name').focus();
-
-    document.getElementById('onboard-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('save-btn');
-      const name = document.getElementById('name').value.trim();
-      if (!name) return showAlert('alert-box', 'Please enter your name', 'error');
-
-      setLoading(btn, true);
-      try {
-        await api('POST', '/api/auth/onboarding', { name });
-        window.location.href = '/dashboard.html';
-      } catch (err) {
-        showAlert('alert-box', err.message, 'error');
-      } finally {
-        setLoading(btn, false);
-      }
-    });
-  </script>
+  <script>window.location.replace('/dashboard.html');</script>
 </body>
 </html>

@@ -111,25 +111,6 @@
       display: block;
     }
 
-    /* ── Danger zone card ─────────────────────────────────── */
-    .danger-card {
-      border-color: rgba(233,50,68,0.25);
-      background: rgba(233,50,68,0.03);
-    }
-    .danger-card:hover {
-      border-color: rgba(233,50,68,0.45);
-    }
-    .danger-title {
-      color: var(--danger);
-      opacity: 1;
-    }
-    .danger-desc {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-bottom: 16px;
-      line-height: 1.6;
-    }
-
     /* ── Section spacing ──────────────────────────────────── */
     .acct-section { margin-bottom: 28px; }
   </style>
@@ -192,37 +173,20 @@
         </div>
       </div>
 
-      <!-- Danger Zone -->
+      <!-- Contact Support -->
       <div class="acct-section">
         <div class="acct-section-title">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <span class="danger-title">Danger Zone</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Support
         </div>
-        <div class="card acct-card danger-card">
-          <p class="danger-desc">Permanently delete your account and all associated data. This action cannot be undone.</p>
-          <button class="btn btn-danger" onclick="showDeleteModal()">Delete My Account</button>
+        <div class="card acct-card">
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.6;">
+            Need to delete your account or have a question? Reach out to us and we'll help you out.
+          </p>
+          <a href="mailto:support@radarly.in" class="btn btn-outline">Contact Support</a>
         </div>
       </div>
 
-    </div>
-  </div>
-
-  <!-- Delete Confirmation Modal -->
-  <div class="modal-overlay" id="delete-modal">
-    <div class="modal-content">
-      <h3 style="margin-bottom:8px;color:var(--danger);">Delete Account?</h3>
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
-        This will permanently delete your account, all saved stocks, alert preferences, and alert history. This cannot be undone.
-      </p>
-      <div class="form-group">
-        <label for="delete-confirm">Type <strong>DELETE</strong> to confirm</label>
-        <input type="text" id="delete-confirm" placeholder="DELETE" autocomplete="off" />
-      </div>
-      <div style="display:flex;gap:12px;">
-        <button class="btn btn-outline" onclick="hideDeleteModal()" style="flex:1;">Cancel</button>
-        <button class="btn btn-danger" id="delete-btn" onclick="deleteAccount()" style="flex:1;" disabled>Delete</button>
-      </div>
-      <div id="delete-alert" style="margin-top:12px;"></div>
     </div>
   </div>
 
@@ -345,35 +309,6 @@
       }
     });
 
-    // Delete modal
-    function showDeleteModal() {
-      document.getElementById('delete-modal').classList.add('active');
-      document.getElementById('delete-confirm').value = '';
-      document.getElementById('delete-btn').disabled = true;
-    }
-
-    function hideDeleteModal() {
-      document.getElementById('delete-modal').classList.remove('active');
-    }
-
-    document.getElementById('delete-confirm').addEventListener('input', (e) => {
-      document.getElementById('delete-btn').disabled = e.target.value.trim() !== 'DELETE';
-    });
-
-    async function deleteAccount() {
-      if (document.getElementById('delete-confirm').value.trim() !== 'DELETE') return;
-      const btn = document.getElementById('delete-btn');
-      setLoading(btn, true);
-      try {
-        await api('DELETE', '/api/user/account', { confirmation: 'DELETE' });
-        clearToken();
-        window.location.href = '/login.html';
-      } catch (err) {
-        showAlert('delete-alert', err.message || 'Failed to delete account', 'error');
-      } finally {
-        setLoading(btn, false);
-      }
-    }
   </script>
 </body>
 </html>

@@ -469,14 +469,20 @@
             return;
           }
 
-          // Sync to MySQL (pass name so onboarding is skipped for new signups)
+          // Sync to MySQL (pass name for new signups)
           const syncResp = await fetch('/api/auth/sync', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: val, name: isRegisterMode ? name : undefined })
           });
           const syncData = await syncResp.json();
-          showSuccess(btn, syncData.needsOnboarding ? '/onboarding.html' : '/dashboard.html');
+
+          if (!syncResp.ok) {
+            await _supa.auth.signOut({ scope: 'local' });
+            throw new Error(syncData.error || 'Sign-in failed. Please try again.');
+          }
+
+          showSuccess(btn, '/dashboard.html');
         } catch (err) {
           showAlert('alert-box', err.message, 'error');
           shakeCard();
