@@ -236,6 +236,16 @@
     .pagination button:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
     .pagination span { font-size: 13px; color: var(--text-secondary); margin: 0 4px; }
 
+    /* ── Refresh spin ────────────────────────────────────────────── */
+    @keyframes spin-once {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    #admin-refresh-btn.spinning .refresh-icon {
+      display: inline-block;
+      animation: spin-once 0.65s ease;
+    }
+
     /* ── Section label ───────────────────────────────────────────── */
     .section-label {
       font-size: 12px; font-weight: 700; color: var(--text-secondary);
@@ -298,7 +308,7 @@
         <button class="btn btn-primary" id="btn-fetch" onclick="triggerFetch()">⬆ Run Data Fetch</button>
         <button class="btn btn-outline" id="btn-alert" onclick="triggerAlert()">🔔 Run Alert Engine</button>
         <button class="btn btn-outline" id="btn-seed" onclick="triggerSeedStocks()">🌱 Seed All Stocks</button>
-        <button class="btn btn-outline" onclick="loadAll()">↺ Refresh</button>
+        <button class="refresh-btn" onclick="adminRefresh()" title="Refresh" id="admin-refresh-btn"><span class="refresh-icon">&#x21bb;</span></button>
       </div>
 
       <!-- Tabs -->
@@ -924,6 +934,15 @@
     }
 
     // ─── Manual triggers ─────────────────────────────────────────────────────
+
+    async function adminRefresh() {
+      const btn = document.getElementById('admin-refresh-btn');
+      btn.classList.add('spinning');
+      btn.disabled = true;
+      await loadAll();
+      btn.classList.remove('spinning');
+      btn.disabled = false;
+    }
 
     async function triggerFetch() {
       const btn = document.getElementById('btn-fetch');
