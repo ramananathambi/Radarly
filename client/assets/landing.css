@@ -602,7 +602,7 @@
 /* ── Contact Section ─────────────────────────────────────────────────────── */
 .lp-contact {
   padding: 80px 24px;
-  background: #fff;
+  background: #0d0d0d;
 }
 .lp-contact-inner {
   max-width: 640px;
@@ -613,41 +613,68 @@
   font-size: 32px;
   font-weight: 700;
   margin-bottom: 12px;
+  color: #fff;
+}
+.lp-contact .lp-section-subtitle {
+  color: rgba(255,255,255,0.5);
 }
 .lp-contact-form {
   margin-top: 32px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
   text-align: left;
 }
 .lp-contact-row {
   display: flex;
   gap: 14px;
 }
-.lp-contact-row input,
-.lp-contact-form input,
-.lp-contact-form textarea {
+
+/* Floating label wrapper */
+.lp-float-label {
+  position: relative;
+  flex: 1;
+}
+.lp-float-label input,
+.lp-float-label textarea {
   width: 100%;
-  padding: 12px 16px;
-  border: 1.5px solid var(--border);
+  padding: 20px 16px 8px;
+  border: 1.5px solid #2a2a2a;
   border-radius: 10px;
   font-size: 15px;
   font-family: inherit;
-  background: var(--bg);
-  color: var(--text);
+  background: #1a1a1a;
+  color: #fff;
   transition: border-color 0.2s;
   box-sizing: border-box;
+  resize: vertical;
 }
-.lp-contact-row input:focus,
-.lp-contact-form input:focus,
-.lp-contact-form textarea:focus {
+.lp-float-label textarea {
+  min-height: 130px;
+}
+.lp-float-label input:focus,
+.lp-float-label textarea:focus {
   outline: none;
   border-color: var(--accent);
 }
-.lp-contact-form textarea {
-  resize: vertical;
-  min-height: 120px;
+.lp-float-label label {
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.35);
+  pointer-events: none;
+  transition: top 0.18s ease, font-size 0.18s ease, color 0.18s ease;
+  line-height: 1;
+}
+.lp-float-label input:focus ~ label,
+.lp-float-label input:not(:placeholder-shown) ~ label,
+.lp-float-label textarea:focus ~ label,
+.lp-float-label textarea:not(:placeholder-shown) ~ label {
+  top: 6px;
+  font-size: 11px;
+  color: var(--accent);
 }
 .lp-contact-btn {
   align-self: flex-start;
@@ -671,8 +698,9 @@
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-muted);
-  background: var(--bg);
+  color: rgba(255,255,255,0.45);
+  background: #1a1a1a;
+  border-color: #2a2a2a;
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s;
   white-space: nowrap;
@@ -683,7 +711,7 @@
 }
 .lp-contact-file-name {
   font-size: 13px;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.3);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -693,5 +721,5 @@
   min-height: 20px;
   margin: 0;
 }
-.lp-contact-success { color: #16a34a; }
+.lp-contact-success { color: #4ade80; }
 .lp-contact-error   { color: var(--accent); }

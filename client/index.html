@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Radarly — Stock Alerts for Indian Investors</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
-  <link rel="stylesheet" href="/assets/style.css?v=5" />
-  <link rel="stylesheet" href="/assets/landing.css?v=5" />
+  <link rel="stylesheet" href="/assets/style.css?v=6" />
+  <link rel="stylesheet" href="/assets/landing.css?v=6" />
 </head>
 <body>
   <nav class="nav">
@@ -179,10 +179,19 @@
       <p class="lp-section-subtitle">Questions, feedback, or suggestions — drop us a message and we'll reply within a day.</p>
       <form class="lp-contact-form" id="contactForm">
         <div class="lp-contact-row">
-          <input type="text" id="contactName" placeholder="Your name" required />
-          <input type="email" id="contactEmail" placeholder="Your email" required />
+          <div class="lp-float-label">
+            <input type="text" id="contactName" placeholder=" " required />
+            <label for="contactName">Your name</label>
+          </div>
+          <div class="lp-float-label">
+            <input type="email" id="contactEmail" placeholder=" " required />
+            <label for="contactEmail">Your email</label>
+          </div>
         </div>
-        <textarea id="contactMessage" placeholder="Your message" rows="4" required></textarea>
+        <div class="lp-float-label">
+          <textarea id="contactMessage" placeholder=" " rows="4" required></textarea>
+          <label for="contactMessage">Your message</label>
+        </div>
         <label class="lp-contact-file-label">
           <input type="file" id="contactFile" accept="image/*" />
           <span class="lp-contact-file-btn">
