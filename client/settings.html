@@ -53,6 +53,15 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
+    /* ── Card hover pop ──────────────────────────────────── */
+    .pref-card {
+      transition: box-shadow 0.22s ease, transform 0.22s ease;
+    }
+    .pref-card:hover {
+      box-shadow: 0 16px 40px rgba(0,0,0,0.10);
+      transform: translateY(-6px);
+    }
+
     /* ── Card entrance animation ─────────────────────────── */
     @keyframes card-in {
       from { opacity: 0; transform: translateY(14px); }
