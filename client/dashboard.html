@@ -277,7 +277,7 @@
         </div>
         <div class="summary-label">Upcoming Events</div>
         <div class="summary-value" id="event-count">—</div>
-        <div class="summary-action" id="event-range-label">Next 30 days</div>
+        <div class="summary-action" id="event-range-label">Next 30 Days</div>
       </div>
       <div class="card summary-card clickable stat-card-stocks" onclick="window.location.href='/mystocks.html'" title="View My Stocks">
         <div class="stat-icon-wrap">
@@ -422,7 +422,7 @@
 
       // Update summary card
       countUp(document.getElementById('event-count'), allEvents.length);
-      document.getElementById('event-range-label').textContent = `Next ${activeDays} days`;
+      document.getElementById('event-range-label').textContent = `Next ${activeDays} Days`;
 
       // Watchlist coverage: how many of my stocks have an upcoming event
       const mySymbols   = new Set(stocksRes.stocks.map(s => s.symbol));
