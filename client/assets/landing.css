@@ -340,7 +340,8 @@
   padding: 32px;
   transition: box-shadow 0.22s ease, transform 0.22s ease;
 }
-.lp-features .lp-feature-card:hover {
+.lp-features .lp-feature-card:hover,
+.lp-features .lp-feature-card:active {
   box-shadow: 0 16px 40px rgba(0,0,0,0.10);
   transform: translateY(-6px);
 }
