@@ -53,17 +53,6 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    .inactive-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      background: var(--bg);
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-    }
-
     /* ── Card entrance animation ─────────────────────────── */
     @keyframes card-in {
       from { opacity: 0; transform: translateY(14px); }
@@ -72,29 +61,6 @@
     .pref-card-anim {
       opacity: 0;
       animation: card-in 0.35s ease forwards;
-    }
-
-    /* ── Coming Soon shimmer ──────────────────────────────── */
-    .coming-soon-card {
-      position: relative;
-      overflow: hidden;
-    }
-    .coming-soon-card::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        105deg,
-        transparent 40%,
-        rgba(255,255,255,0.45) 50%,
-        transparent 60%
-      );
-      background-size: 200% 100%;
-      animation: cs-shimmer 2.6s ease-in-out infinite;
-    }
-    @keyframes cs-shimmer {
-      0%   { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
     }
 
     /* ── Active count badge ───────────────────────────────── */
@@ -175,11 +141,6 @@
       <div class="spinner"></div>
     </div>
 
-    <!-- Upcoming alert types (inactive) -->
-    <div style="margin-top:24px;">
-      <div class="section-title">Coming Soon</div>
-      <div id="inactive-prefs"></div>
-    </div>
   </div>
 
   <footer class="site-footer">
@@ -210,7 +171,6 @@
       const prefsRes = await api('GET', '/api/user/preferences').catch(() => ({ preferences: [] }));
       const prefs = prefsRes.preferences || [];
       renderActivePrefs(prefs.filter(p => p.alert_types?.is_active));
-      renderInactivePrefs(prefs.filter(p => !p.alert_types?.is_active));
     }
 
     async function refreshData() {
@@ -263,35 +223,6 @@
 
       container.innerHTML = html;
       updateActiveCount(prefs.filter(p => p.is_enabled).length);
-    }
-
-    function renderInactivePrefs(prefs) {
-      const container = document.getElementById('inactive-prefs');
-
-      // Show all known inactive types
-      const inactiveCodes = ['BONUS', 'SPLIT', 'BUYBACK'].filter(
-        code => !document.getElementById(`pref-${code}`)
-      );
-
-      if (inactiveCodes.length === 0) {
-        container.innerHTML = '';
-        return;
-      }
-
-      let html = '';
-      for (const code of inactiveCodes) {
-        const desc = alertDescriptions[code] || `Alerts for ${code} corporate actions.`;
-        html += `
-          <div class="card pref-card coming-soon-card" style="opacity:0.6;">
-            <div class="pref-info">
-              <div class="pref-title">${formatAlertType(code)} <span class="inactive-badge">Coming Soon</span></div>
-              <div class="pref-desc">${desc}</div>
-            </div>
-          </div>
-        `;
-      }
-
-      container.innerHTML = html;
     }
 
     function updateActiveCount(n) {
