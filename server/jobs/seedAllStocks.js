@@ -178,28 +178,45 @@ async function fetchNSEViaIndices() {
 }
 
 async function fetchAllNSE() {
-  // Strategy 1: CSV via curl
+  // Step 1: Get full stock list from CSV (symbol + company_name, no sector)
+  let stocks = [];
+
   try {
-    return await fetchNSECsvViaCurl();
+    stocks = await fetchNSECsvViaCurl();
   } catch (err) {
     console.warn('[SeedAll] NSE CSV via curl failed:', err.message);
+    try {
+      stocks = await fetchNSECsvViaAxios();
+    } catch (err2) {
+      console.warn('[SeedAll] NSE CSV via axios also failed:', err2.message);
+    }
   }
 
-  // Strategy 2: CSV via axios
+  // Step 2: Always enrich with sector data from index APIs (regardless of CSV success)
+  // NSE indices return industry/sector which the CSV lacks entirely
   try {
-    return await fetchNSECsvViaAxios();
+    const indexStocks = await fetchNSEViaIndices();
+    const sectorMap = new Map(
+      indexStocks.filter(s => s.sector).map(s => [s.symbol, s.sector])
+    );
+    console.log(`[SeedAll] Sector data available for ${sectorMap.size} stocks from indices`);
+
+    if (stocks.length > 0) {
+      // Enrich CSV stocks with sector where available
+      stocks = stocks.map(s => ({
+        ...s,
+        sector: sectorMap.get(s.symbol) || s.sector || null,
+      }));
+    } else {
+      // CSV failed entirely — use index stocks as the stock list
+      stocks = indexStocks;
+    }
   } catch (err) {
-    console.warn('[SeedAll] NSE CSV via axios failed:', err.message);
+    console.warn('[SeedAll] Index sector enrichment failed:', err.message);
+    // Continue with whatever stocks we have (sector will be null for all)
   }
 
-  // Strategy 3: Index APIs via curl
-  try {
-    return await fetchNSEViaIndices();
-  } catch (err) {
-    console.warn('[SeedAll] NSE indices fallback failed:', err.message);
-  }
-
-  return [];
+  return stocks;
 }
 
 // ─── Upsert ──────────────────────────────────────────────────────────────────
