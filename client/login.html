@@ -6,7 +6,6 @@
   <title>Login — Radarly</title>
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   <link rel="stylesheet" href="/assets/style.css" />
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     body {
       min-height: 100vh;
@@ -95,16 +94,15 @@
     }
     #toggle-row, #toggle-row a { color: rgba(255,255,255,0.45); }
     #toggle-row a#toggle-mode-link { color: var(--accent); }
-    #forgot-flow { color: rgba(255,255,255,0.55); }
 
-    /* ── Autofill detection (Touch ID / password manager) ── */
+    /* Autofill detection */
     @keyframes autofill-detect { from {} to {} }
     .form-group input:-webkit-autofill {
       animation-name: autofill-detect;
       animation-duration: 0.001ms;
     }
 
-    /* ── Floating labels ─────────────────────────────────── */
+    /* Floating labels */
     .float-label { position: relative; text-align: left !important; }
     .float-label input {
       padding-top: 18px !important;
@@ -134,7 +132,7 @@
       z-index: 1;
     }
 
-    /* ── Password group — CSS hide so autofill can discover it ── */
+    /* Password group */
     #password-group {
       max-height: 0;
       overflow: hidden;
@@ -151,15 +149,15 @@
       pointer-events: auto;
     }
 
-    /* ── Card shake on error ─────────────────────────────── */
+    /* Card shake */
     @keyframes card-shake {
       0%, 100% { transform: translateX(0); }
-      18%, 54% { transform: translateX(-9px); }
-      36%, 72% { transform: translateX(9px); }
+      18%, 54%  { transform: translateX(-9px); }
+      36%, 72%  { transform: translateX(9px); }
     }
     .card.shake { animation: card-shake 0.42s ease; }
 
-    /* ── Submit button success state ─────────────────────── */
+    /* Submit success */
     .btn-success-state {
       background: var(--success) !important;
       pointer-events: none;
@@ -192,7 +190,7 @@
 
         <button class="social-btn" id="apple-btn" onclick="appleSignIn()">
           <svg width="18" height="18" viewBox="0 0 18 18">
-            <path fill="#000" d="M14.94 9.88c-.02-2.1 1.72-3.12 1.8-3.17-0.98-1.43-2.5-1.63-3.04-1.65-1.3-.13-2.53.76-3.18.76-.66 0-1.67-.74-2.74-.72-1.41.02-2.71.82-3.44 2.08-1.47 2.54-.37 6.31 1.05 8.38.7 1.01 1.53 2.15 2.63 2.11 1.05-.04 1.45-.68 2.73-.68 1.27 0 1.64.68 2.75.66 1.14-.02 1.85-1.03 2.54-2.04.8-1.17 1.13-2.3 1.15-2.36-.03-.01-2.2-.84-2.22-3.35zM12.87 3.53c.58-.7.97-1.68.86-2.65-.83.03-1.84.55-2.44 1.25-.53.62-1 1.6-.87 2.55.93.07 1.87-.47 2.45-1.15z"/>
+            <path fill="#fff" d="M14.94 9.88c-.02-2.1 1.72-3.12 1.8-3.17-0.98-1.43-2.5-1.63-3.04-1.65-1.3-.13-2.53.76-3.18.76-.66 0-1.67-.74-2.74-.72-1.41.02-2.71.82-3.44 2.08-1.47 2.54-.37 6.31 1.05 8.38.7 1.01 1.53 2.15 2.63 2.11 1.05-.04 1.45-.68 2.73-.68 1.27 0 1.64.68 2.75.66 1.14-.02 1.85-1.03 2.54-2.04.8-1.17 1.13-2.3 1.15-2.36-.03-.01-2.2-.84-2.22-3.35zM12.87 3.53c.58-.7.97-1.68.86-2.65-.83.03-1.84.55-2.44 1.25-.53.62-1 1.6-.87 2.55.93.07 1.87-.47 2.45-1.15z"/>
           </svg>
           Continue with Apple
         </button>
@@ -222,53 +220,23 @@
         </div>
       </form>
 
-      <!-- ── Forgot Password Flow ───────────────────────────────────────── -->
+      <!-- Forgot Password Flow -->
       <div id="forgot-flow" style="display:none;">
         <div id="alert-box-forgot"></div>
-
-        <!-- Step 1: Enter email -->
-        <div id="forgot-step-1">
-          <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;text-align:center;">Enter your account email and we'll send you a reset OTP.</p>
-          <div class="form-group float-label">
-            <input type="email" id="forgot-email" placeholder=" " />
-            <label for="forgot-email">Email Address</label>
-          </div>
-          <button class="btn btn-primary" style="width:100%;" id="forgot-send-btn" onclick="sendForgotOTP()">Send OTP</button>
+        <p style="color:rgba(255,255,255,0.55);font-size:13px;margin-bottom:16px;text-align:center;">
+          Enter your email and we'll send you a password reset link.
+        </p>
+        <div class="form-group float-label">
+          <input type="email" id="forgot-email" placeholder=" " />
+          <label for="forgot-email">Email Address</label>
         </div>
-
-        <!-- Step 2: Enter OTP -->
-        <div id="forgot-step-2" style="display:none;">
-          <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;text-align:center;">Enter the 6-digit OTP sent to <strong id="forgot-email-display"></strong></p>
-          <div class="form-group" style="text-align:center;">
-            <label for="forgot-otp">OTP Code</label>
-            <input type="text" id="forgot-otp" placeholder="123456" maxlength="6" style="text-align:center;letter-spacing:6px;font-size:20px;" />
-          </div>
-          <button class="btn btn-primary" style="width:100%;" id="forgot-verify-btn" onclick="verifyForgotOTP()">Verify OTP</button>
-          <div style="margin-top:10px;text-align:center;font-size:13px;color:var(--text-secondary);">
-            Didn't receive it? <a href="#" style="color:var(--accent);" onclick="sendForgotOTP(event)">Resend</a>
-          </div>
-        </div>
-
-        <!-- Step 3: New password -->
-        <div id="forgot-step-3" style="display:none;">
-          <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;text-align:center;">Choose a new password for your account.</p>
-          <div class="form-group float-label">
-            <input type="password" id="forgot-newpass" placeholder=" " minlength="8" />
-            <label for="forgot-newpass">New Password</label>
-          </div>
-          <div class="form-group float-label">
-            <input type="password" id="forgot-confirmpass" placeholder=" " />
-            <label for="forgot-confirmpass">Confirm Password</label>
-          </div>
-          <button class="btn btn-primary" style="width:100%;" id="forgot-reset-btn" onclick="resetPassword()">Reset Password</button>
-        </div>
-
+        <button class="btn btn-primary" style="width:100%;" id="forgot-send-btn" onclick="sendForgotLink()">Send Reset Link</button>
         <div style="margin-top:14px;text-align:center;font-size:13px;">
-          <a href="#" style="color:var(--text-secondary);" onclick="hideForgot(event)">← Back to Sign In</a>
+          <a href="#" style="color:rgba(255,255,255,0.35);" onclick="hideForgot(event)">← Back to Sign In</a>
         </div>
       </div>
 
-      <div style="margin-top:10px;text-align:center;color:var(--text-secondary);font-size:13px;">
+      <div style="margin-top:10px;text-align:center;color:rgba(255,255,255,0.35);font-size:13px;">
         By signing in, you agree to receive WhatsApp alerts from Radarly.
       </div>
     </div>
@@ -280,17 +248,21 @@
     <div style="margin-top:8px; opacity:0.6; font-size:12px;">© 2026 Radarly. All rights reserved.</div>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="/assets/supabase-client.js"></script>
   <script src="/assets/app.js"></script>
   <script>
-    // If already logged in, redirect
-    getMe().then(u => { if (u) window.location.href = '/dashboard.html'; });
+    // If already logged in, redirect to dashboard
+    _supa.auth.getSession().then(({ data: { session } }) => {
+      if (session) window.location.href = '/dashboard.html';
+    });
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────────
     function shakeCard() {
       const card = document.querySelector('.card');
       if (!card) return;
       card.classList.remove('shake');
-      void card.offsetWidth; // force reflow to restart animation
+      void card.offsetWidth;
       card.classList.add('shake');
       setTimeout(() => card.classList.remove('shake'), 440);
     }
@@ -301,91 +273,44 @@
       setTimeout(() => { window.location.href = dest; }, 750);
     }
 
-    // ─── Google Sign-In ───────────────────────────────────────────────
-    let googleInitialized = false;
-
-    function initGoogle() {
-      if (googleInitialized) return;
-      // Check if GOOGLE_CLIENT_ID is available via a meta tag or config endpoint
-      const clientId = document.querySelector('meta[name="google-client-id"]')?.content;
-      if (!clientId) {
-        console.log('[Auth] Google Client ID not configured');
-        return;
-      }
-
-      google.accounts.id.initialize({
-        client_id: clientId,
-        callback: handleGoogleResponse,
-        auto_select: false,
-      });
-      googleInitialized = true;
-    }
-
+    // ── Google Sign-In (via Supabase OAuth) ──────────────────────────────────
     async function googleSignIn() {
-      const clientId = document.querySelector('meta[name="google-client-id"]')?.content;
-      if (!clientId) {
-        // Fallback: try fetching config from server
-        try {
-          const cfg = await fetch('/api/auth/config').then(r => r.json());
-          if (cfg.googleClientId) {
-            google.accounts.id.initialize({
-              client_id: cfg.googleClientId,
-              callback: handleGoogleResponse,
-            });
-            google.accounts.id.prompt();
-            return;
-          }
-        } catch {}
-        return showAlert('alert-box', 'Google Sign-In is not yet configured. Please use phone login.', 'error');
-      }
-
-      if (!googleInitialized) initGoogle();
-      google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // One Tap not available, try popup
-          google.accounts.id.prompt();
-        }
-      });
-    }
-
-    async function handleGoogleResponse(response) {
       const btn = document.getElementById('google-btn');
       btn.disabled = true;
-      btn.textContent = 'Signing in...';
-
+      btn.textContent = 'Redirecting…';
       try {
-        const data = await api('POST', '/api/auth/google', {
-          credential: response.credential,
+        const { error } = await _supa.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: window.location.origin + '/auth/callback.html' }
         });
-        setToken(data.session_token);
-        if (data.needsOnboarding) {
-          window.location.href = '/onboarding.html';
-        } else {
-          window.location.href = '/dashboard.html';
-        }
+        if (error) throw error;
       } catch (err) {
-        showAlert('alert-box', err.message, 'error');
+        showAlert('alert-box', err.message || 'Google Sign-In failed. Please try again.', 'error');
         btn.disabled = false;
         btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg> Continue with Google`;
       }
     }
 
-    // ─── Apple Sign-In ────────────────────────────────────────────────
+    // ── Apple Sign-In (via Supabase OAuth) ───────────────────────────────────
     async function appleSignIn() {
-      // Apple Sign-In requires HTTPS and Apple Developer configuration
-      // For now, show a helpful message
+      const btn = document.getElementById('apple-btn');
+      btn.disabled = true;
+      btn.textContent = 'Redirecting…';
       try {
-        const cfg = await fetch('/api/auth/config').then(r => r.json());
-        if (!cfg.appleEnabled) {
-          return showAlert('alert-box', 'Apple Sign-In is not yet configured. Please use Google or phone login.', 'error');
-        }
-      } catch {
-        return showAlert('alert-box', 'Apple Sign-In is not yet configured. Please use Google or phone login.', 'error');
+        const { error } = await _supa.auth.signInWithOAuth({
+          provider: 'apple',
+          options: { redirectTo: window.location.origin + '/auth/callback.html' }
+        });
+        if (error) throw error;
+      } catch (err) {
+        showAlert('alert-box', err.message || 'Apple Sign-In failed. Please try again.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18"><path fill="#fff" d="M14.94 9.88c-.02-2.1 1.72-3.12 1.8-3.17-0.98-1.43-2.5-1.63-3.04-1.65-1.3-.13-2.53.76-3.18.76-.66 0-1.67-.74-2.74-.72-1.41.02-2.71.82-3.44 2.08-1.47 2.54-.37 6.31 1.05 8.38.7 1.01 1.53 2.15 2.63 2.11 1.05-.04 1.45-.68 2.73-.68 1.27 0 1.64.68 2.75.66 1.14-.02 1.85-1.03 2.54-2.04.8-1.17 1.13-2.3 1.15-2.36-.03-.01-2.2-.84-2.22-3.35zM12.87 3.53c.58-.7.97-1.68.86-2.65-.83.03-1.84.55-2.44 1.25-.53.62-1 1.6-.87 2.55.93.07 1.87-.47 2.45-1.15z"/></svg> Continue with Apple`;
       }
     }
 
-    // ─── Unified Email / Phone Auth ────────────────────────────────────
-    let inputMode = 'unknown'; // 'email', 'phone', 'unknown'
+    // ── Unified Email / Phone form ────────────────────────────────────────────
+    let inputMode = 'unknown';
     let isRegisterMode = false;
 
     const identityInput = document.getElementById('identity-input');
@@ -422,10 +347,7 @@
         inputMode = 'unknown';
       }
 
-      // Show/hide password field based on mode
-      const isMobile = navigator.maxTouchPoints > 0 || 'ontouchstart' in window || window.matchMedia('(pointer:coarse)').matches;
       if (inputMode === 'email') {
-        const firstTime = prevMode !== 'email';
         passwordGroup.classList.add('visible');
         document.getElementById('password-input').setAttribute('required', '');
         toggleRow.style.display = 'block';
@@ -436,20 +358,14 @@
         toggleRow.style.display = 'none';
         nameGroup.style.display = 'none';
         submitBtn.textContent = inputMode === 'phone' ? 'Send OTP' : 'Continue';
-        if (prevMode === 'email' && inputMode !== 'email') {
-          isRegisterMode = false;
-        }
-        // Auto-send OTP when 10 valid digits entered
+        if (prevMode === 'email' && inputMode !== 'email') isRegisterMode = false;
         if (inputMode === 'phone' && isPhone(val)) {
           document.getElementById('auth-form').requestSubmit();
         }
       }
     });
 
-    // ── Autofill detection (Touch ID / password manager) ─────────────────
-    // CSS animation trick: :-webkit-autofill fires animationstart → we dispatch
-    // a synthetic 'input' event so the password group becomes visible,
-    // then auto-submit once both fields are filled.
+    // Autofill detection
     identityInput.addEventListener('animationstart', (e) => {
       if (e.animationName !== 'autofill-detect') return;
       identityInput.dispatchEvent(new Event('input'));
@@ -457,9 +373,7 @@
 
     document.getElementById('password-input').addEventListener('animationstart', (e) => {
       if (e.animationName !== 'autofill-detect') return;
-      // Make sure email detection has run first (password group visible)
       identityInput.dispatchEvent(new Event('input'));
-      // Brief delay so both fills settle, then auto-submit
       setTimeout(() => {
         if (passwordGroup.classList.contains('visible')) authForm.requestSubmit();
       }, 80);
@@ -480,13 +394,12 @@
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = submitBtn;
-      let val = identityInput.value.trim();
+      const val = identityInput.value.trim();
 
-      // Determine what to do based on input
       if (isEmail(val)) {
-        // Email + password flow
+        // Email + password via Supabase
         const password = document.getElementById('password-input').value;
-        const name = document.getElementById('reg-name').value.trim();
+        const name     = document.getElementById('reg-name').value.trim();
 
         if (!password || password.length < 8) {
           return showAlert('alert-box', 'Password must be at least 8 characters', 'error');
@@ -497,12 +410,35 @@
 
         setLoading(btn, true);
         try {
-          const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
-          const body = isRegisterMode ? { name, email: val, password } : { email: val, password };
-          const data = await api('POST', endpoint, body);
-          setToken(data.session_token);
-          const dest = data.needsOnboarding ? '/onboarding.html' : '/dashboard.html';
-          showSuccess(btn, dest);
+          let session;
+          if (isRegisterMode) {
+            const { data, error } = await _supa.auth.signUp({
+              email: val,
+              password,
+              options: { data: { name } }
+            });
+            if (error) throw error;
+            session = data.session;
+          } else {
+            const { data, error } = await _supa.auth.signInWithPassword({ email: val, password });
+            if (error) throw error;
+            session = data.session;
+          }
+
+          if (!session) {
+            showAlert('alert-box', 'Check your email to confirm your account, then sign in.', 'info');
+            setLoading(btn, false);
+            return;
+          }
+
+          // Sync to MySQL
+          const syncResp = await fetch('/api/auth/sync', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: val })
+          });
+          const syncData = await syncResp.json();
+          showSuccess(btn, syncData.needsOnboarding ? '/onboarding.html' : '/dashboard.html');
         } catch (err) {
           showAlert('alert-box', err.message, 'error');
           shakeCard();
@@ -510,7 +446,7 @@
         }
 
       } else if (isPhone(val)) {
-        // Phone OTP flow
+        // Phone OTP via Supabase
         let phone = val.replace(/[\s\-()]/g, '');
         if (/^[6-9]\d{9}$/.test(phone)) phone = '+91' + phone;
         if (!/^\+91[6-9]\d{9}$/.test(phone)) {
@@ -519,13 +455,13 @@
 
         setLoading(btn, true);
         try {
-          await api('POST', '/api/auth/otp/send', { phone });
+          const { error } = await _supa.auth.signInWithOtp({ phone });
+          if (error) throw error;
           localStorage.setItem('otp_phone', phone);
           window.location.href = '/verify.html';
         } catch (err) {
-          showAlert('alert-box', err.message, 'error');
+          showAlert('alert-box', err.message || 'Failed to send OTP. Please try again.', 'error');
           shakeCard();
-        } finally {
           setLoading(btn, false);
         }
 
@@ -534,18 +470,11 @@
       }
     });
 
-    // Try initializing Google on load
-    window.addEventListener('load', () => {
-      setTimeout(initGoogle, 500);
-    });
-
-    // ─── Forgot Password Flow ─────────────────────────────────────────────
-    let forgotEmail = '';
-
+    // ── Forgot Password (Supabase sends email link) ──────────────────────────
     function showForgot(e) {
       e.preventDefault();
-      forgotEmail = document.getElementById('identity-input').value.trim();
-      if (forgotEmail) document.getElementById('forgot-email').value = forgotEmail;
+      const email = document.getElementById('identity-input').value.trim();
+      if (email) document.getElementById('forgot-email').value = email;
       document.getElementById('auth-form').style.display = 'none';
       document.getElementById('forgot-flow').style.display = 'block';
       document.getElementById('alert-box').innerHTML = '';
@@ -555,81 +484,24 @@
       e.preventDefault();
       document.getElementById('forgot-flow').style.display = 'none';
       document.getElementById('auth-form').style.display = 'block';
-      // Reset forgot flow state
-      showForgotStep(1);
       document.getElementById('alert-box-forgot').innerHTML = '';
     }
 
-    function showForgotStep(n) {
-      document.getElementById('forgot-step-1').style.display = n === 1 ? 'block' : 'none';
-      document.getElementById('forgot-step-2').style.display = n === 2 ? 'block' : 'none';
-      document.getElementById('forgot-step-3').style.display = n === 3 ? 'block' : 'none';
-    }
-
-    async function sendForgotOTP(e) {
-      if (e) e.preventDefault();
+    async function sendForgotLink() {
       const email = document.getElementById('forgot-email').value.trim();
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return showAlert('alert-box-forgot', 'Please enter a valid email address', 'error');
       }
-      forgotEmail = email;
       const btn = document.getElementById('forgot-send-btn');
       setLoading(btn, true);
       try {
-        await api('POST', '/api/auth/forgot-password', { email });
-        document.getElementById('forgot-email-display').textContent = email;
-        showAlert('alert-box-forgot', `OTP sent to ${email}`, 'success');
-        showForgotStep(2);
+        const { error } = await _supa.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + '/auth/reset.html'
+        });
+        if (error) throw error;
+        showAlert('alert-box-forgot', `Reset link sent to ${email}. Check your inbox.`, 'success');
       } catch (err) {
-        showAlert('alert-box-forgot', err.message, 'error');
-      } finally {
-        setLoading(btn, false);
-      }
-    }
-
-    async function verifyForgotOTP() {
-      const otp = document.getElementById('forgot-otp').value.trim();
-      if (!otp || otp.length !== 6) {
-        return showAlert('alert-box-forgot', 'Enter the 6-digit OTP', 'error');
-      }
-      const btn = document.getElementById('forgot-verify-btn');
-      setLoading(btn, true);
-      try {
-        // Verify OTP lightly by attempting a dry-run — actually just move to step 3
-        // Real verification happens on reset-password
-        showForgotStep(3);
-        document.getElementById('alert-box-forgot').innerHTML = '';
-      } finally {
-        setLoading(btn, false);
-      }
-    }
-
-    async function resetPassword() {
-      const otp      = document.getElementById('forgot-otp').value.trim();
-      const password = document.getElementById('forgot-newpass').value;
-      const confirm  = document.getElementById('forgot-confirmpass').value;
-
-      if (password.length < 8) {
-        return showAlert('alert-box-forgot', 'Password must be at least 8 characters', 'error');
-      }
-      if (password !== confirm) {
-        return showAlert('alert-box-forgot', 'Passwords do not match', 'error');
-      }
-
-      const btn = document.getElementById('forgot-reset-btn');
-      setLoading(btn, true);
-      try {
-        await api('POST', '/api/auth/reset-password', { email: forgotEmail, otp, password });
-        showAlert('alert-box-forgot', 'Password reset successfully! Redirecting to sign in…', 'success');
-        setTimeout(() => {
-          hideForgot({ preventDefault: () => {} });
-          document.getElementById('identity-input').value = forgotEmail;
-          identityInput.dispatchEvent(new Event('input'));
-        }, 2000);
-      } catch (err) {
-        showAlert('alert-box-forgot', err.message, 'error');
-        // If OTP wrong, go back to OTP step
-        if (err.message.toLowerCase().includes('otp')) showForgotStep(2);
+        showAlert('alert-box-forgot', err.message || 'Failed to send reset link.', 'error');
       } finally {
         setLoading(btn, false);
       }

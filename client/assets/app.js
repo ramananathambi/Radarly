@@ -1,18 +1,25 @@
 /**
  * app.js — Shared client-side utilities for Radarly
+ * Requires supabase-client.js to be loaded first (provides window._supa)
  */
 
-// ─── Session management ──────────────────────────────────────────────────────
+// ─── Session management (Supabase) ───────────────────────────────────────────
 
-function getToken() { return localStorage.getItem('session_token'); }
-function setToken(t) { localStorage.setItem('session_token', t); }
-function clearToken() { localStorage.removeItem('session_token'); }
+async function getToken() {
+  const { data: { session } } = await _supa.auth.getSession();
+  return session?.access_token || null;
+}
+
+async function logout() {
+  await _supa.auth.signOut();
+  window.location.href = '/';
+}
 
 // ─── API helper ──────────────────────────────────────────────────────────────
 
 async function api(method, path, body) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
-  const token = getToken();
+  const token = await getToken();
   if (token) opts.headers['Authorization'] = `Bearer ${token}`;
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(path, opts);
@@ -29,15 +36,11 @@ async function getMe() {
 }
 
 async function requireLogin() {
+  const { data: { session } } = await _supa.auth.getSession();
+  if (!session) { window.location.href = '/login.html'; return null; }
   const user = await getMe();
   if (!user) { window.location.href = '/login.html'; return null; }
   return user;
-}
-
-async function logout() {
-  try { await api('POST', '/api/auth/logout'); } catch {}
-  clearToken();
-  window.location.href = '/';
 }
 
 // ─── UI helpers ──────────────────────────────────────────────────────────────
@@ -106,7 +109,7 @@ function showToast(message, type = 'success') {
   }, 2600);
 }
 
-// ─── Nav helper (update Login/Logout link) ───────────────────────────────────
+// ─── Nav helper ──────────────────────────────────────────────────────────────
 
 function setupNav(activePage) {
   const links = document.querySelectorAll('.nav-links a');
@@ -123,14 +126,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const navLinks = nav?.querySelector('.nav-links');
   if (!nav || !navLinks) return;
 
-  // Create hamburger button
   const toggle = document.createElement('button');
   toggle.className = 'nav-toggle';
   toggle.setAttribute('aria-label', 'Toggle menu');
-  toggle.innerHTML = '&#9776;'; // ☰
+  toggle.innerHTML = '&#9776;';
   nav.insertBefore(toggle, nav.firstChild);
 
-  // Create overlay for closing sidebar
   const overlay = document.createElement('div');
   overlay.className = 'nav-overlay';
   document.body.appendChild(overlay);
@@ -138,13 +139,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function openMenu() {
     navLinks.classList.add('open');
     overlay.classList.add('open');
-    toggle.innerHTML = '&#10005;'; // ✕
+    toggle.innerHTML = '&#10005;';
   }
 
   function closeMenu() {
     navLinks.classList.remove('open');
     overlay.classList.remove('open');
-    toggle.innerHTML = '&#9776;'; // ☰
+    toggle.innerHTML = '&#9776;';
   }
 
   toggle.addEventListener('click', () => {
@@ -153,7 +154,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   overlay.addEventListener('click', closeMenu);
 
-  // Close menu when a link is clicked
   navLinks.querySelectorAll('a').forEach(a => {
     a.addEventListener('click', closeMenu);
   });

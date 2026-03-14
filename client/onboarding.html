@@ -32,9 +32,13 @@
     <div style="margin-top:8px; opacity:0.6; font-size:12px;">© 2026 Radarly. All rights reserved.</div>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="/assets/supabase-client.js"></script>
   <script src="/assets/app.js"></script>
   <script>
-    if (!getToken()) window.location.href = '/login.html';
+    _supa.auth.getSession().then(({ data: { session } }) => {
+      if (!session) window.location.href = '/login.html';
+    });
 
     document.getElementById('name').focus();
 

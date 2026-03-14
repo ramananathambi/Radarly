@@ -21,7 +21,7 @@
       padding: 32px 16px;
     }
 
-    /* Dark card — same as login */
+    /* Dark card */
     .card {
       background: #000;
       border-color: #2a2a2a;
@@ -47,7 +47,6 @@
     }
     .form-group label { color: rgba(255,255,255,0.55); font-size: 13px; margin-bottom: 6px; display: block; }
 
-    /* OTP input */
     #otp {
       letter-spacing: 10px;
       text-align: center;
@@ -56,7 +55,6 @@
       padding: 14px 16px !important;
     }
 
-    /* Resend row */
     .resend-row {
       margin-top: 20px;
       text-align: center;
@@ -76,14 +74,10 @@
       cursor: pointer;
       transition: all 0.15s;
     }
-    .resend-btn:not(:disabled):hover {
-      border-color: #ffffff;
-      color: #ffffff;
-    }
+    .resend-btn:not(:disabled):hover { border-color: #ffffff; color: #ffffff; }
     .resend-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .timer-text { color: rgba(255,255,255,0.4); font-size: 13px; }
 
-    /* Back link */
     .back-link {
       display: block;
       text-align: center;
@@ -129,6 +123,8 @@
     <div style="margin-top:8px; opacity:0.6; font-size:12px;">© 2026 Radarly. All rights reserved.</div>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="/assets/supabase-client.js"></script>
   <script src="/assets/app.js"></script>
   <script>
     const phone = localStorage.getItem('otp_phone');
@@ -139,9 +135,9 @@
 
     document.getElementById('otp').focus();
 
-    // Countdown
+    // Countdown timer
     let countdown = 30;
-    const timerEl  = document.getElementById('timer');
+    const timerEl   = document.getElementById('timer');
     const resendBtn = document.getElementById('resend-btn');
     timerEl.textContent = `${countdown}s`;
     const interval = setInterval(() => {
@@ -156,17 +152,28 @@
       if (e.target.value.length === 6) document.getElementById('otp-form').requestSubmit();
     });
 
+    // Resend OTP
     resendBtn.addEventListener('click', async () => {
       resendBtn.disabled = true;
       try {
-        await api('POST', '/api/auth/otp/send', { phone });
+        const { error } = await _supa.auth.signInWithOtp({ phone });
+        if (error) throw error;
         showAlert('alert-box', 'New OTP sent!', 'success');
+        // Restart countdown
+        countdown = 30;
+        timerEl.textContent = `${countdown}s`;
+        const newInterval = setInterval(() => {
+          countdown--;
+          timerEl.textContent = countdown > 0 ? `${countdown}s` : '';
+          if (countdown <= 0) { clearInterval(newInterval); resendBtn.disabled = false; }
+        }, 1000);
       } catch (err) {
-        showAlert('alert-box', err.message, 'error');
+        showAlert('alert-box', err.message || 'Failed to resend OTP', 'error');
         resendBtn.disabled = false;
       }
     });
 
+    // Verify OTP
     document.getElementById('otp-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('verify-btn');
@@ -175,13 +182,28 @@
 
       setLoading(btn, true);
       try {
-        const data = await api('POST', '/api/auth/otp/verify', { phone, otp });
-        setToken(data.session_token);
+        const { data, error } = await _supa.auth.verifyOtp({
+          phone,
+          token: otp,
+          type:  'sms',
+        });
+        if (error) throw error;
+
+        // Sync Supabase user to MySQL
+        const syncResp = await fetch('/api/auth/sync', {
+          method: 'POST',
+          headers: {
+            'Authorization':  `Bearer ${data.session.access_token}`,
+            'Content-Type':   'application/json',
+          },
+          body: JSON.stringify({ phone }),
+        });
+        const syncData = await syncResp.json();
+
         localStorage.removeItem('otp_phone');
-        window.location.href = data.needsOnboarding ? '/onboarding.html' : '/dashboard.html';
+        window.location.href = syncData.needsOnboarding ? '/onboarding.html' : '/dashboard.html';
       } catch (err) {
-        showAlert('alert-box', err.message, 'error');
-      } finally {
+        showAlert('alert-box', err.message || 'Invalid OTP. Please try again.', 'error');
         setLoading(btn, false);
       }
     });

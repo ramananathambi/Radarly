@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signing in — Radarly</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <link rel="stylesheet" href="/assets/style.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      color: #fff;
+      font-family: inherit;
+    }
+    .callback-card {
+      text-align: center;
+      padding: 40px 32px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: var(--accent, #6366f1);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    p { color: rgba(255,255,255,0.6); font-size: 14px; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="callback-card">
+    <div class="spinner"></div>
+    <p>Completing sign-in…</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="/assets/supabase-client.js"></script>
+  <script>
+    // Supabase automatically exchanges the URL hash/code for a session
+    _supa.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error || !session) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      try {
+        // Sync Supabase user to MySQL
+        const resp = await fetch('/api/auth/sync', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type':  'application/json',
+          },
+          body: JSON.stringify({
+            email: session.user.email  || null,
+            phone: session.user.phone  || null,
+          }),
+        });
+
+        const data = await resp.json();
+        window.location.href = data.needsOnboarding ? '/onboarding.html' : '/dashboard.html';
+      } catch {
+        window.location.href = '/dashboard.html';
+      }
+    });
+  </script>
+</body>
+</html>
