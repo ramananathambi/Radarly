@@ -16,6 +16,12 @@
     }
     .filters .form-group { margin-bottom: 0; flex: 1; min-width: 160px; }
     .filters .search-group { flex: 2; min-width: 220px; }
+    /* Force identical heights for search input and sector select */
+    .filters input,
+    .filters select {
+      height: 44px;
+      box-sizing: border-box;
+    }
     .stock-row td { vertical-align: middle; }
     .bookmark-btn {
       background: none;
