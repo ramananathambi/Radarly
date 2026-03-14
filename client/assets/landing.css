@@ -341,8 +341,8 @@
   transition: box-shadow 0.22s ease, transform 0.22s ease;
 }
 .lp-feature-card:hover {
-  box-shadow: 0 24px 56px rgba(0,0,0,0.18);
-  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.10);
+  transform: translateY(-6px);
 }
 .lp-feature-icon {
   width: 48px;
