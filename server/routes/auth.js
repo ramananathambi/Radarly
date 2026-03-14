@@ -58,6 +58,13 @@ router.post('/sync', async (req, res) => {
     let user = rows[0] || null;
 
     if (!user) {
+      // Email is mandatory for new accounts
+      if (!email) {
+        return res.status(400).json({
+          error: 'An email address is required to create an account. Please sign in with Google or use your email to register.',
+        });
+      }
+
       // Block if another account already uses this email
       if (email) {
         const [emailRows] = await pool.execute(
