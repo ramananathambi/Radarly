@@ -184,7 +184,7 @@
               <select class="scope-select" id="scope-${code}" ${!isEnabled ? 'disabled' : ''}
                       onchange="updatePref('${code}')">
                 <option value="all_stocks" ${scope === 'all_stocks' ? 'selected' : ''}>All Stocks</option>
-                <option value="selected_stocks" ${scope === 'selected_stocks' ? 'selected' : ''}>My Stocks Only</option>
+                <option value="selected_stocks" ${scope === 'selected_stocks' ? 'selected' : ''}>My Watchlist</option>
               </select>
               <label class="toggle">
                 <input type="checkbox" id="toggle-${code}" ${isEnabled ? 'checked' : ''}
