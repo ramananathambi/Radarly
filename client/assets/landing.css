@@ -224,30 +224,15 @@
 
 /* Steps */
 .lp-steps-section {
-  background: #000;
+  background: #fff;
   max-width: 100%;
   padding: 56px 16px;
-}
-.lp-steps-section .lp-section-title {
-  color: #fff;
-}
-.lp-steps-section .lp-section-subtitle {
-  color: rgba(255,255,255,0.5);
 }
 .lp-steps-section .lp-section-title,
 .lp-steps-section .lp-section-subtitle {
   max-width: 1100px;
   margin-left: auto;
   margin-right: auto;
-}
-.lp-steps-section .lp-step h3 {
-  color: #fff;
-}
-.lp-steps-section .lp-step p {
-  color: rgba(255,255,255,0.5);
-}
-.lp-steps-section .lp-step-arrow {
-  color: #444;
 }
 .lp-steps {
   display: flex;
