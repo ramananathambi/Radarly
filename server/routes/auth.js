@@ -65,31 +65,49 @@ router.post('/sync', async (req, res) => {
         });
       }
 
-      // Block if another account already uses this email
-      if (email) {
-        const [emailRows] = await pool.execute(
-          'SELECT id FROM users WHERE email = ? AND id != ?',
-          [email, supaId]
-        );
-        if (emailRows.length > 0) {
-          return res.status(409).json({
-            error: 'An account with this email already exists. Please delete your existing account first, or sign in with the same login method you used before.',
-          });
-        }
-      }
+      // Check if email exists under a different Supabase UUID
+      // (can happen after account migration / duplicate cleanup)
+      const [emailRows] = await pool.execute(
+        'SELECT id, name, phone, email FROM users WHERE email = ? AND id != ?',
+        [email, supaId]
+      );
 
-      // New user — create MySQL record using Supabase UUID as id
-      await pool.execute(
-        `INSERT INTO users (id, phone, email, is_verified) VALUES (?, ?, ?, 1)`,
-        [supaId, phone, email]
-      );
-      const [newRows] = await pool.execute(
-        'SELECT id, name, phone, email FROM users WHERE id = ?',
-        [supaId]
-      );
-      user = newRows[0];
-      await createDefaultPreferences(supaId);
-    } else {
+      if (emailRows.length > 0) {
+        // Re-link existing account to this Supabase UUID
+        const oldId = emailRows[0].id;
+        console.log(`[Sync] Re-linking account ${oldId} → ${supaId} for email ${email}`);
+        const conn = await pool.getConnection();
+        try {
+          await conn.beginTransaction();
+          await conn.execute('UPDATE alert_log              SET user_id = ? WHERE user_id = ?', [supaId, oldId]);
+          await conn.execute('UPDATE user_stocks            SET user_id = ? WHERE user_id = ?', [supaId, oldId]);
+          await conn.execute('UPDATE user_alert_preferences SET user_id = ? WHERE user_id = ?', [supaId, oldId]);
+          await conn.execute('UPDATE users                  SET id = ?      WHERE id = ?',      [supaId, oldId]);
+          await conn.commit();
+        } catch (err) {
+          await conn.rollback();
+          throw err;
+        } finally {
+          conn.release();
+        }
+        const [relinkedRows] = await pool.execute(
+          'SELECT id, name, phone, email FROM users WHERE id = ?', [supaId]
+        );
+        user = relinkedRows[0];
+      } else {
+        // Truly new user — create MySQL record using Supabase UUID as id
+        await pool.execute(
+          `INSERT INTO users (id, phone, email, is_verified) VALUES (?, ?, ?, 1)`,
+          [supaId, phone, email]
+        );
+        const [newRows] = await pool.execute(
+          'SELECT id, name, phone, email FROM users WHERE id = ?',
+          [supaId]
+        );
+        user = newRows[0];
+        await createDefaultPreferences(supaId);
+      }
+    } else {  // existing user found by UUID
       // Existing user — update phone/email if newly available from Supabase
       const updates = [];
       const values  = [];
