@@ -256,6 +256,17 @@
   <script src="/assets/supabase-client.js"></script>
   <script src="/assets/app.js"></script>
   <script>
+    // Show error passed from callback (e.g. duplicate email, missing email)
+    const _urlError = new URLSearchParams(window.location.search).get('error');
+    if (_urlError) {
+      // Wait for DOM then show it
+      document.addEventListener('DOMContentLoaded', () => {
+        showAlert('alert-box', decodeURIComponent(_urlError), 'error');
+      });
+      // Clean URL without reload
+      history.replaceState(null, '', '/login.html');
+    }
+
     // If we just force-logged-out from dashboard, skip session check
     if (sessionStorage.getItem('_auth_cleared')) {
       sessionStorage.removeItem('_auth_cleared');

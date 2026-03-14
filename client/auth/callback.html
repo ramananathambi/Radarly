@@ -64,9 +64,18 @@
         });
 
         const data = await resp.json();
+
+        if (!resp.ok) {
+          // Sync failed — sign out and redirect to login with the error message
+          await _supa.auth.signOut({ scope: 'local' });
+          const msg = encodeURIComponent(data.error || 'Sign-in failed. Please try again.');
+          window.location.href = `/login.html?error=${msg}`;
+          return;
+        }
+
         window.location.href = data.needsOnboarding ? '/onboarding.html' : '/dashboard.html';
       } catch {
-        window.location.href = '/dashboard.html';
+        window.location.href = '/login.html';
       }
     });
   </script>
