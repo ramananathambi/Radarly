@@ -64,7 +64,7 @@ router.get('/scheduler', requireAdmin, async (req, res) => {
 
 router.get('/alert-types', requireAdmin, async (req, res) => {
   try {
-    const [rows] = await pool.execute('SELECT * FROM alert_types ORDER BY id');
+    const [rows] = await pool.execute('SELECT * FROM alert_types ORDER BY code');
     res.json({ types: rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
